@@ -61,6 +61,8 @@ async function laadSchoolEnReisData(schoolSlug) {
         actieveSchool = school;
 
         // 2. Zoek automatisch de actieve/recente reis voor deze school
+        // OPLOSSING: We gebruiken maybeSingle() in plaats van single() om 406 fouten te voorkomen 
+        // als er (nog) geen zichtbare reis bestaat voor deze school.
         const { data: reis, error: reisErr } = await supabase
             .from('reis')
             .select('*')
@@ -68,7 +70,7 @@ async function laadSchoolEnReisData(schoolSlug) {
             .eq('is_zichtbaar', true)
             .order('datum_start', { ascending: false })
             .limit(1)
-            .single(); 
+            .maybeSingle(); 
 
         if (!reisErr && reis) {
             actieveReis = reis;
@@ -225,7 +227,7 @@ function setupEventListeners() {
                     .ilike('vnaam', vnaam)
                     .ilike('naam', naam)
                     .eq('rol', 'LEERKRACHT')
-                    .single();
+                    .maybeSingle();
 
                 if (!lkrData) {
                     // Maak een nieuw record aan in de database voor deze leerkracht
@@ -281,7 +283,8 @@ async function verwerkTerugkeerVanSmartschool(payload) {
             reisQuery = reisQuery.eq('is_zichtbaar', true).order('datum_start', { ascending: false }).limit(1);
         }
 
-        const { data: reis } = await reisQuery.single();
+        // Ook hier maybeSingle() gebruiken om de 406 fout te voorkomen
+        const { data: reis } = await reisQuery.maybeSingle();
 
         if (reis) {
             const toegestaan = checkReisToegang(reis, gebruiker);
