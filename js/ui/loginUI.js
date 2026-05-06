@@ -1,10 +1,10 @@
 /**
  * ============================================================================
- * PEDLET - Login UI (Visuele logica voor het inlogscherm)
+ * PEDLET - Login UI (Visuele logica voor het geanimeerde inlogscherm)
  * ============================================================================
  * Dit bestand beheert de login pagina. Het haalt de schoolgegevens op,
- * past de achtergrond aan, controleert de time-gates en verwerkt de 
- * terugkeer-data (payload) van de Smartschool OAuth koppeling.
+ * past de dynamische achtergrond aan, controleert de time-gates en verwerkt 
+ * zowel de leerlingen- als leerkrachten logica.
  */
 
 import { supabase } from '../config/supabase.js';
@@ -40,7 +40,7 @@ export async function initLoginUI() {
     // C. Laad de school en de actieve reis op de achtergrond
     await laadSchoolEnReisData(schoolSlug);
     
-    // D. Koppel de knoppen
+    // D. Koppel de acties aan beide formulieren
     setupEventListeners();
 }
 
@@ -66,10 +66,12 @@ async function laadSchoolEnReisData(schoolSlug) {
             .select('*')
             .eq('school_id', school.id)
             .eq('is_actief', true)
-            .single(); // We gaan ervan uit dat er max 1 inschrijving tegelijk actief is
+            .single(); 
 
         if (!reisErr && reis) {
             actieveReis = reis;
+            // Sla het reis ID op voor later gebruik
+            sessionStorage.setItem('pedlet_actieve_reis_id', reis.id);
         }
 
         updateSchermVisuals();
@@ -81,26 +83,27 @@ async function laadSchoolEnReisData(schoolSlug) {
 }
 
 function updateSchermVisuals() {
-    // 1. Pas teksten aan
+    // 1. Pas titels aan (het linker animerende paneel)
     const titelEl = document.getElementById('loginTitel');
     const subtitelEl = document.getElementById('loginSubtitel');
     
-    if (titelEl) titelEl.textContent = `Welkom bij ${ontsnapHTML(actieveSchool.naam)}`;
+    if (titelEl && actieveReis) {
+        titelEl.textContent = ontsnapHTML(actieveReis.naam);
+    } else if (titelEl) {
+        titelEl.textContent = "Geen actieve reis";
+    }
     
-    if (subtitelEl && actieveReis) {
-        subtitelEl.textContent = `Inloggen voor: ${ontsnapHTML(actieveReis.naam)}`;
-    } else if (subtitelEl) {
-        subtitelEl.textContent = "Er is momenteel geen actieve inschrijving.";
+    if (subtitelEl) {
+        subtitelEl.textContent = ontsnapHTML(actieveSchool.naam);
     }
 
-    // 2. Achtergrond aanpassen (als de reis een custom bg heeft)
+    // 2. Achtergrond aanpassen op het dynamic-bg element
     if (actieveReis && actieveReis.login_bg) {
-        document.body.style.backgroundImage = `url('${actieveReis.login_bg}')`;
-        document.body.style.backgroundSize = 'cover';
-        document.body.style.backgroundPosition = 'center';
+        const bgEl = document.getElementById('dynamic-bg');
+        if (bgEl) bgEl.style.backgroundImage = `url('${actieveReis.login_bg}')`;
     }
 
-    // 3. Time-Gate Controle (Mag men er al op?)
+    // 3. Time-Gate Controle voor leerlingen (Mag men er al op?)
     if (actieveReis && actieveReis.datum_online) {
         const nu = new Date();
         const onlineDatum = new Date(actieveReis.datum_online);
@@ -109,15 +112,6 @@ function updateSchermVisuals() {
             toonTijdslotWaarschuwing(onlineDatum);
         }
     }
-
-    // 4. Inlogmethode UI aanpassen (verberg manueel of smartschool indien nodig)
-    if (actieveReis && actieveReis.inlogmethode === 'smartschool') {
-        const manueelForm = document.getElementById('manueelLoginForm');
-        if (manueelForm) manueelForm.style.display = 'none';
-    } else if (actieveReis && actieveReis.inlogmethode === 'manueel') {
-        const ssKnop = document.getElementById('btnSmartschoolLogin');
-        if (ssKnop) ssKnop.style.display = 'none';
-    }
 }
 
 function toonTijdslotWaarschuwing(onlineDatum) {
@@ -125,42 +119,39 @@ function toonTijdslotWaarschuwing(onlineDatum) {
     if (!waarschuwingDiv) return;
 
     waarschuwingDiv.innerHTML = `
-        <div class="bg-orange-50 border-l-4 border-orange-400 p-4 mb-6">
+        <div class="bg-orange-50 border-l-4 border-orange-400 p-4 mb-6 rounded-r-lg w-full">
             <div class="flex">
                 <div class="flex-shrink-0">
                     <i data-lucide="clock" class="h-5 w-5 text-orange-400"></i>
                 </div>
                 <div class="ml-3">
-                    <p class="text-sm text-orange-700 font-bold">Inschrijvingen nog gesloten!</p>
+                    <p class="text-sm text-orange-700 font-bold">Inschrijvingen nog gesloten</p>
                     <p class="text-sm text-orange-600 mt-1">
-                        Leerlingen hebben pas toegang vanaf <br>
-                        <strong>${formatteerDatumTijd(actieveReis.datum_online)}</strong>.
+                        Toegang vanaf <strong>${formatteerDatumTijd(actieveReis.datum_online)}</strong>.
                     </p>
-                    <p class="text-xs text-orange-500 mt-2 italic">Leerkrachten kunnen wel al inloggen om te testen.</p>
                 </div>
             </div>
         </div>
     `;
-    // Update de iconen
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 // ============================================================================
-// 3. INLOG ACTIES
+// 3. INLOG ACTIES (Leerlingen & Leerkrachten)
 // ============================================================================
 
 function setupEventListeners() {
-    // Smartschool Knop
+    
+    // --- A. SMARTSCHOOL KNOP ---
     const btnSS = document.getElementById('btnSmartschoolLogin');
     if (btnSS) {
-        btnSS.addEventListener('click', () => {
-            // Verwijs naar de PHP backend, geef eventuele parameters mee als nodig
-            // In loginSS.php is alles al ingesteld.
-            window.location.href = `backend/loginSS.php`;
+        btnSS.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = `backend/loginSS.php?school=${actieveSchool.id}`;
         });
     }
 
-    // Manueel Formulier
+    // --- B. LEERLINGEN MANUEEL FORMULIER ---
     const formManueel = document.getElementById('manueelLoginForm');
     if (formManueel) {
         formManueel.addEventListener('submit', async (e) => {
@@ -169,36 +160,92 @@ function setupEventListeners() {
             const naam = document.getElementById('inputNaam').value.trim();
             const klas = document.getElementById('inputKlas').value.trim();
 
-            if (!vnaam || !naam || !klas) {
-                toonMelding("Vul alle velden in.", "error");
-                return;
-            }
+            if (!vnaam || !naam || !klas) return toonMelding("Vul alle velden in.", "error");
 
             try {
-                // Toon laad-status
                 const btn = formManueel.querySelector('button[type="submit"]');
-                const origineleTekst = btn.textContent;
-                btn.textContent = "Bezig met inloggen...";
+                btn.innerHTML = "Bezig met inloggen...";
                 btn.disabled = true;
 
-                // Call the API
+                // Call de API
                 const gebruiker = await loginManueel(actieveSchool.id, vnaam, naam, klas);
                 
                 // Controleer rechten (Time-gate)
                 if (actieveReis) {
                     const toegestaan = checkReisToegang(actieveReis, gebruiker);
-                    if (!toegestaan.toegang) {
-                        throw new Error(toegestaan.reden);
-                    }
+                    if (!toegestaan.toegang) throw new Error(toegestaan.reden);
                 }
 
+                // Succes -> Ga naar verdeling
                 toonMelding(`Welkom ${ontsnapHTML(gebruiker.vnaam)}!`, "success");
-                setTimeout(() => window.location.href = 'verdeling.html', 1000);
+                
+                // Trigger de exit animatie van login.html
+                document.getElementById('auth-container').classList.add('exit-slide');
+                setTimeout(() => window.location.href = 'verdeling.html', 550);
 
             } catch (error) {
                 toonMelding(error.message, "error");
                 const btn = formManueel.querySelector('button[type="submit"]');
-                btn.textContent = "Log in";
+                btn.innerHTML = "Doorgaan als Leerling";
+                btn.disabled = false;
+            }
+        });
+    }
+
+    // --- C. LEERKRACHTEN FORMULIER ---
+    const formLeerkracht = document.getElementById('teacherLoginForm');
+    if (formLeerkracht) {
+        formLeerkracht.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const vnaam = document.getElementById('inputLkrVnaam').value.trim();
+            const naam = document.getElementById('inputLkrNaam').value.trim();
+            const wachtwoord = document.getElementById('inputLkrWachtwoord').value;
+
+            if (!vnaam || !naam || !wachtwoord) return toonMelding("Vul alle velden in.", "error");
+
+            try {
+                const btn = formLeerkracht.querySelector('button[type="submit"]');
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Bezig...';
+                btn.disabled = true;
+
+                // 1. Controleer het wachtwoord veilig via de database RPC
+                const { data: isGeldig, error } = await supabase.rpc('verify_teacher_password', {
+                    p_password: wachtwoord,
+                    p_school_id: actieveSchool.id
+                });
+
+                if (error || !isGeldig) throw new Error("Ongeldig schoolwachtwoord.");
+
+                // 2. Zoek of we deze leerkracht al in de database hebben staan (of maak aan)
+                let { data: lkrData } = await supabase.from('persoon')
+                    .select('*')
+                    .eq('school_id', actieveSchool.id)
+                    .ilike('vnaam', vnaam)
+                    .ilike('naam', naam)
+                    .eq('rol', 'LEERKRACHT')
+                    .single();
+
+                if (!lkrData) {
+                    // Maak een nieuw record aan in de database voor deze leerkracht
+                    const { data: nieuwLkr, error: insertErr } = await supabase.from('persoon')
+                        .insert([{ school_id: actieveSchool.id, vnaam, naam, rol: 'LEERKRACHT' }])
+                        .select().single();
+                    if (insertErr) throw new Error("Kon profiel niet registreren.");
+                    lkrData = nieuwLkr;
+                }
+
+                // 3. Sla lokaal op en redirect
+                sessionStorage.setItem('pedlet_user', JSON.stringify(lkrData));
+                toonMelding(`Welkom beheerder ${ontsnapHTML(lkrData.vnaam)}!`, "success");
+                
+                // Animatie
+                document.getElementById('auth-container').classList.add('exit-slide');
+                setTimeout(() => window.location.href = 'admin.html', 550);
+
+            } catch (error) {
+                toonMelding(error.message, "error");
+                const btn = formLeerkracht.querySelector('button[type="submit"]');
+                btn.innerHTML = "Inloggen als Beheerder";
                 btn.disabled = false;
             }
         });
@@ -212,10 +259,17 @@ async function verwerkTerugkeerVanSmartschool(payload) {
     try {
         toonMelding("Smartschool data verwerken...", "info");
         
-        // 1. Verwerk de data in de database via auth.js
+        // 1. Verwerk de data in de database
         const gebruiker = await verwerkSmartschoolLogin(payload);
         
-        // 2. Haal de reis op om te checken of hij/zij erin mag
+        // 2. Rol-gebaseerde redirect (Leerkracht = admin, Leerling = verdeling)
+        if (gebruiker.rol === 'LEERKRACHT') {
+            toonMelding(`Welkom beheerder ${ontsnapHTML(gebruiker.vnaam)}!`, "success");
+            setTimeout(() => window.location.href = 'admin.html', 1000);
+            return;
+        }
+
+        // 3. Voor leerlingen: Check time-gates
         const { data: reis } = await supabase
             .from('reis')
             .select('*')
@@ -224,15 +278,10 @@ async function verwerkTerugkeerVanSmartschool(payload) {
             .single();
 
         if (reis) {
-            // 3. Time-gate en rechten check
             const toegestaan = checkReisToegang(reis, gebruiker);
             if (!toegestaan.toegang) {
-                // Toegang geweigerd (bijv. te vroeg voor leerlingen)
                 toonMelding(toegestaan.reden, "error");
-                // Gooi de sessie weer leeg
                 sessionStorage.removeItem('pedlet_user');
-                
-                // Stuur ze na 4 seconden terug naar het lege inlogscherm van hun school
                 setTimeout(() => {
                     const schoolSlug = new URLSearchParams(window.location.search).get('school');
                     window.location.href = `login.html?school=${schoolSlug}`;
@@ -241,13 +290,11 @@ async function verwerkTerugkeerVanSmartschool(payload) {
             }
         }
 
-        // 4. Alles oké! Doorsturen naar het dashboard
         toonMelding(`Welkom ${ontsnapHTML(gebruiker.vnaam)}!`, "success");
         setTimeout(() => window.location.href = 'verdeling.html', 1000);
 
     } catch (error) {
         toonMelding(error.message, "error");
-        // Haal de payload uit de URL zodat we niet in een loop blijven hangen
         setTimeout(() => {
             const schoolSlug = new URLSearchParams(window.location.search).get('school');
             window.location.href = `login.html?school=${schoolSlug}`;
