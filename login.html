@@ -94,16 +94,6 @@
         .auth-container.teacher-active .student-wrapper { opacity: 0; visibility: hidden; pointer-events: none; transform: translateX(20%); }
         .auth-container.teacher-active .teacher-wrapper { opacity: 1; visibility: visible; pointer-events: all; transform: translateX(0); }
 
-        /* Selectie scherm styling */
-        .selection-wrapper {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            display: none; justify-content: center; align-items: center; 
-            background-color: #f3f4f6; z-index: 200; pointer-events: all;
-        }
-        .selection-wrapper .form-content {
-            background: white; padding: 40px; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.05); width: 100%; max-width: 450px;
-        }
-
         /* Veld stijlen */
         .input-group { position: relative; margin-bottom: 16px; width: 100%; }
         .input-group input, .input-group select {
@@ -134,7 +124,6 @@
             .auth-container.teacher-active .student-wrapper { opacity: 0; pointer-events: none; position: absolute; top:0; }
             .teacher-wrapper { transform: translateX(0); opacity: 0; position: absolute; top:0; }
             .auth-container.teacher-active .teacher-wrapper { opacity: 1; position: relative; }
-            .selection-wrapper .form-content { padding: 30px 20px; border-radius: 0; box-shadow: none; background: transparent; }
         }
     </style>
 </head>
@@ -142,6 +131,7 @@
 
 <div class="auth-container" id="auth-container">
     
+    <!-- Geanimeerde Afbeelding -->
     <div class="image-panel" id="mainImagePanel">
         <div class="image-bg" id="dynamic-bg"></div>
         <div class="image-text-wrap">
@@ -152,39 +142,6 @@
 
     <div class="forms-container">
         
-        <!-- SELECTIE SCHERM (Als er geen school/reis in URL staat) -->
-        <div class="selection-wrapper" id="selection-wrapper">
-            <div class="form-content">
-                <div class="text-center w-full mb-8">
-                    <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-xl">
-                        <i class="fa-solid fa-map-location-dot"></i>
-                    </div>
-                    <h1 class="text-2xl font-bold text-slate-800">Vind jouw bestemming</h1>
-                    <p class="text-slate-500 text-sm mt-2">Kies je school en de activiteit waarvoor je wil inloggen.</p>
-                </div>
-
-                <div class="w-full space-y-5">
-                    <div class="input-group">
-                        <select id="select_school" class="bg-white" onchange="window.loadReizenForSelection()">
-                            <option value="">-- Kies een school --</option>
-                        </select>
-                        <label style="top:0; transform: translateY(-50%) scale(0.85); background: white; color: var(--primary-color); font-weight: 700;">School</label>
-                    </div>
-                    
-                    <div class="input-group">
-                        <select id="select_reis" class="bg-white" disabled>
-                            <option value="">-- Kies eerst een school --</option>
-                        </select>
-                        <label style="top:0; transform: translateY(-50%) scale(0.85); background: white; color: var(--primary-color); font-weight: 700;">Activiteit</label>
-                    </div>
-
-                    <button onclick="window.goToLoginUrl()" class="w-full h-12 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center mt-6">
-                        Ga naar inlogpagina
-                    </button>
-                </div>
-            </div>
-        </div>
-
         <!-- LEERLINGEN FORMULIER -->
         <div class="form-wrapper student-wrapper" id="studentWrapper">
             <div class="form-content">
@@ -236,7 +193,7 @@
                     </div>
                 </div>
 
-                <div class="mt-8 text-center text-sm text-slate-500">
+                <div class="mt-8 text-center text-sm text-slate-500" id="toTeacherBtnContainer">
                     Ben je een begeleider? <button onclick="window.toggleAuthMode()" class="text-blue-600 font-bold hover:underline cursor-pointer bg-transparent border-none">Klik hier</button>
                 </div>
                 
@@ -255,7 +212,7 @@
                     <p class="text-slate-500 text-sm mt-1">Beheer activiteiten en indelingen</p>
                 </div>
 
-                <div class="space-y-4 w-full">
+                <div id="teacherActions" class="space-y-4 w-full">
                     <div class="flex-row">
                         <div class="input-group">
                             <input type="text" id="lk_vnaam" placeholder=" ">
@@ -279,7 +236,7 @@
                     </button>
                 </div>
 
-                <div class="mt-8 text-center text-sm text-slate-500">
+                <div class="mt-8 text-center text-sm text-slate-500" id="toStudentBtnContainer">
                     Ben je een leerling? <button onclick="window.toggleAuthMode()" class="text-blue-600 font-bold hover:underline cursor-pointer bg-transparent border-none">Keer terug</button>
                 </div>
 
@@ -301,56 +258,6 @@
     // --- UI FUNCTIES ---
     window.toggleAuthMode = function() {
         document.getElementById('auth-container').classList.toggle('teacher-active');
-    };
-
-    window.loadReizenForSelection = async function() {
-        const schoolSelect = document.getElementById('select_school');
-        const reisSelect = document.getElementById('select_reis');
-        const selectedOpt = schoolSelect.options[schoolSelect.selectedIndex];
-        
-        reisSelect.innerHTML = '<option value="">-- Laden... --</option>';
-        reisSelect.disabled = true;
-
-        if (!selectedOpt.value) {
-            reisSelect.innerHTML = '<option value="">-- Kies eerst een school --</option>';
-            return;
-        }
-
-        const schoolId = selectedOpt.dataset.id;
-        try {
-            const { data: reizen, error } = await supabase.from('reis')
-                .select('id, naam, slug')
-                .eq('school_id', schoolId)
-                .order('naam');
-
-            if(error) throw error;
-
-            reisSelect.innerHTML = '<option value="">-- Kies een activiteit --</option>';
-            if (reizen && reizen.length > 0) {
-                reisSelect.disabled = false;
-                reizen.forEach(r => {
-                    const opt = document.createElement('option');
-                    opt.value = r.slug;
-                    opt.innerText = r.naam;
-                    reisSelect.appendChild(opt);
-                });
-            } else {
-                reisSelect.innerHTML = '<option value="">-- Geen activiteiten gevonden --</option>';
-            }
-        } catch (err) {
-            console.error('Fout bij het ophalen van activiteiten:', err);
-            reisSelect.innerHTML = '<option value="">-- Fout bij ophalen --</option>';
-        }
-    };
-
-    window.goToLoginUrl = function() {
-        const schoolSlug = document.getElementById('select_school').value;
-        const reisSlug = document.getElementById('select_reis').value;
-        if (schoolSlug && reisSlug) {
-            window.location.href = `login.html?school=${schoolSlug}&reis=${reisSlug}`;
-        } else {
-            alert("Selecteer alstublieft eerst een school en de bijhorende activiteit.");
-        }
     };
 
     // --- STUDENT INLOGGEN ---
@@ -467,31 +374,13 @@
         currentSchoolSlug = params.get('school');
         currentReisSlug = params.get('reis'); 
 
-        // ALS ER GEEN PARAMETERS ZIJN: TOON SELECTIESCHERM
+        // ALS ER GEEN PARAMETERS ZIJN: TOON FOUTMELDING
         if (!currentSchoolSlug || !currentReisSlug) {
-            document.getElementById('mainImagePanel').style.display = 'none';
-            document.getElementById('studentWrapper').style.display = 'none';
-            document.getElementById('teacherWrapper').style.display = 'none';
-            document.getElementById('selection-wrapper').style.display = 'flex';
-
-            // Haal scholen op en vul dropdown
-            try {
-                const { data: scholen } = await supabase.from('school').select('id, naam, slug').order('naam');
-                const schoolSelect = document.getElementById('select_school');
-                if (scholen && scholen.length > 0) {
-                    scholen.forEach(s => {
-                        const opt = document.createElement('option');
-                        opt.value = s.slug;
-                        opt.dataset.id = s.id;
-                        opt.innerText = s.naam;
-                        schoolSelect.appendChild(opt);
-                    });
-                } else {
-                    schoolSelect.innerHTML = '<option value="">-- Geen scholen gevonden --</option>';
-                }
-            } catch (err) {
-                console.error(err);
-            }
+            toonFoutLayout("Geen bestemming", "Gebruik de officiële school-link om hier in te loggen.");
+            document.getElementById('studentActions').classList.add('hidden');
+            document.getElementById('teacherActions').classList.add('hidden');
+            document.getElementById('toTeacherBtnContainer').classList.add('hidden');
+            document.getElementById('toStudentBtnContainer').classList.add('hidden');
             return;
         }
         
@@ -513,19 +402,22 @@
                     
                     document.getElementById('smartschoolBtn').href = `backend/loginSS.php?aanmelden=1&school=${schoolData.id}&reis=${reisData.id}`;
                 } else {
-                    toonFoutLayout("Reis niet gevonden");
+                    toonFoutLayout("Activiteit niet gevonden", "Controleer de URL of contacteer je beheerder.");
                 }
             } else {
-                toonFoutLayout("School niet gevonden");
+                toonFoutLayout("School niet gevonden", "Controleer de URL of contacteer je beheerder.");
             }
         } catch(e) {
-            toonFoutLayout("Fout bij laden");
+            toonFoutLayout("Fout bij laden", "Er ging iets mis met de verbinding.");
         }
 
-        function toonFoutLayout(bericht) {
-            document.getElementById('loginMainTitle').innerText = bericht;
-            document.getElementById('loginSubTitle').innerText = "Controleer de URL of contacteer je beheerder.";
+        function toonFoutLayout(titel, subTitel) {
+            document.getElementById('loginMainTitle').innerText = titel;
+            document.getElementById('loginSubTitle').innerText = subTitel;
             document.getElementById('studentActions').classList.add('hidden');
+            document.getElementById('teacherActions').classList.add('hidden');
+            document.getElementById('toTeacherBtnContainer').classList.add('hidden');
+            document.getElementById('toStudentBtnContainer').classList.add('hidden');
         }
     });
 </script>
