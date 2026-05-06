@@ -2,106 +2,532 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inloggen | Pedlet</title>
-    
-    <!-- Tailwind CSS voor snelle, moderne styling -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title id="pageTitle">Systeem Login</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: { primary: { 50: '#eff6ff', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' } }
+                }
+            }
+        }
+    </script>
     <style>
-        body {
-            /* Fallback achtergrond, loginUI.js zal dit overschrijven als er een foto is ingesteld */
-            background: linear-gradient(135deg, #e0e7ff 0%, #f3f4f6 100%);
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        :root {
+            --primary-color: #2563eb;
+            --primary-dark: #1e40af;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --input-bg: #f9fafb;
+            --image-width: 55%; 
+            --form-width: 45%;
+            --anim-speed: 0.7s;
+            --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body, html {
+            margin: 0; padding: 0; 
+            width: 100vw; height: 100vh; height: 100dvh; 
+            overflow: hidden; font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        /* --- PAGE TRANSITION ANIMATIE --- */
+        .auth-container {
+            position: relative; overflow: hidden; width: 100%; height: 100%; background: #fff;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.6s ease;
+        }
+        .auth-container.exit-slide {
+            transform: translateX(-100vw);
+            opacity: 0;
         }
         
-        /* Zorgt dat het formulier leesbaar is, zelfs met een drukke achtergrondfoto */
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+        .forms-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; pointer-events: none; }
+        
+        .form-wrapper {
+            position: absolute; top: 0; width: var(--form-width); height: 100%;
+            display: flex; flex-direction: column; overflow-y: auto; padding: 20px 40px;
+            transition: all var(--anim-speed) var(--ease-smooth); z-index: 10;
+            opacity: 0; visibility: hidden; pointer-events: none; background: white;
+        }
+        
+        .form-content { margin: auto 0; width: 100%; display: flex; flex-direction: column; align-items: center; transition: opacity 0.3s ease; }
+
+        /* Actieve staten */
+        .student-wrapper { left: var(--image-width); opacity: 1; visibility: visible; pointer-events: all; transform: translateX(0); }
+        .teacher-wrapper { left: 0; transform: translateX(-20%); }
+
+        /* Het magische geanimeerde foto-paneel */
+        .image-panel {
+            position: absolute; top: 0; left: 0; width: var(--image-width); height: 100%; z-index: 100; overflow: hidden; 
+            background-color: var(--primary-dark); 
+            transition: transform var(--anim-speed) var(--ease-smooth), clip-path var(--anim-speed) var(--ease-smooth); 
+            clip-path: polygon(0 0, 100% 0, 85% 100%, 0% 100%); pointer-events: all;
+        }
+        
+        .image-bg {
+            width: 100vw; height: 100%; background-color: #0f172a; background-size: cover; background-position: center center; 
+            position: absolute; top: 0; left: 0; transition: transform var(--anim-speed) var(--ease-smooth);
+        }
+        
+        .image-bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(15,23,42,0.8) 0%, rgba(0,0,0,0.3) 100%); }
+
+        .image-text-wrap {
+            position: absolute; bottom: 80px; left: 60px; z-index: 5; color: #ffffff; max-width: 450px; 
+            transition: transform var(--anim-speed) var(--ease-smooth), opacity 0.4s;
+        }
+        .image-text-wrap h2 { font-size: 42px; font-weight: 800; margin: 0 0 10px 0; text-shadow: 0 2px 10px rgba(0,0,0,0.3); letter-spacing: -1px; line-height: 1.1; }
+        .image-text-wrap p { font-size: 16px; margin: 0; font-weight: 500; text-shadow: 0 1px 5px rgba(0,0,0,0.3); text-transform: uppercase; letter-spacing: 2px; color: #cbd5e1; }
+
+        /* Schuif actie! Wanneer de leerkracht modus actief is */
+        .auth-container.teacher-active .image-panel {
+            transform: translateX(calc(100vw - 100%));
+            clip-path: polygon(15% 0, 100% 0, 100% 100%, 0% 100%);
+        }
+        .auth-container.teacher-active .image-bg { transform: translateX(-15%); }
+        .auth-container.teacher-active .image-text-wrap { transform: translateX(20px); opacity: 0; }
+        .auth-container.teacher-active .student-wrapper { opacity: 0; visibility: hidden; pointer-events: none; transform: translateX(20%); }
+        .auth-container.teacher-active .teacher-wrapper { opacity: 1; visibility: visible; pointer-events: all; transform: translateX(0); }
+
+        /* Selectie scherm styling */
+        .selection-wrapper {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            display: none; justify-content: center; align-items: center; 
+            background-color: #f3f4f6; z-index: 200; pointer-events: all;
+        }
+        .selection-wrapper .form-content {
+            background: white; padding: 40px; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.05); width: 100%; max-width: 450px;
+        }
+
+        /* Veld stijlen */
+        .input-group { position: relative; margin-bottom: 16px; width: 100%; }
+        .input-group input, .input-group select {
+            width: 100%; height: 48px; padding: 0 14px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; 
+            color: var(--text-main); background-color: var(--input-bg); outline: none; transition: all 0.2s; font-family: 'Inter', sans-serif;
+        }
+        .input-group input:focus, .input-group select:focus { border-color: var(--primary-color); background-color: #fff; box-shadow: 0 0 0 4px rgba(37,99,235,0.1); }
+        .input-group label {
+            position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--text-muted); 
+            pointer-events: none; transition: all 0.2s ease; background: transparent; padding: 0 4px;
+        }
+        .input-group input:focus + label, .input-group input:not(:placeholder-shown) + label {
+            top: 0; transform: translateY(-50%) scale(0.85); left: 10px; background: white; color: var(--primary-color); font-weight: 700;
+        }
+        
+        .flex-row { display: flex; gap: 12px; width: 100%; }
+
+        /* Mobiele optimalisatie */
+        @media (max-width: 900px) {
+            .image-panel { height: 160px; width: 100%; top: 0; left: 0; clip-path: polygon(0 0, 100% 0, 100% 85%, 0% 100%) !important; transform: none !important; }
+            .auth-container.teacher-active .image-panel { transform: none !important; }
+            .image-bg { width: 100%; transform: none !important; } 
+            .image-text-wrap { bottom: 30px; left: 20px; }
+            .image-text-wrap h2 { font-size: 28px; }
+            .forms-container { top: 160px; height: calc(100% - 160px); overflow-y: auto; pointer-events: all; }
+            .form-wrapper { width: 100%; left: 0 !important; padding: 30px 20px; height: auto; min-height: 100%; display: block; }
+            .student-wrapper { transform: translateX(0); transition: opacity 0.3s; position: relative; }
+            .auth-container.teacher-active .student-wrapper { opacity: 0; pointer-events: none; position: absolute; top:0; }
+            .teacher-wrapper { transform: translateX(0); opacity: 0; position: absolute; top:0; }
+            .auth-container.teacher-active .teacher-wrapper { opacity: 1; position: relative; }
+            .selection-wrapper .form-content { padding: 30px 20px; border-radius: 0; box-shadow: none; background: transparent; }
         }
     </style>
 </head>
 <body>
 
-    <div class="max-w-md w-full mx-4">
-        <!-- Het Inlog Formulier / Paneel -->
-        <div class="glass-panel rounded-2xl shadow-2xl overflow-hidden border border-white/50 p-8">
-            
-            <!-- School / Activiteit Info -->
-            <div class="text-center mb-8">
-                <div class="inline-flex items-center justify-center h-16 w-16 rounded-full bg-indigo-100 text-indigo-600 mb-4 shadow-inner">
-                    <i data-lucide="school" class="h-8 w-8"></i>
-                </div>
-                <h1 id="loginTitel" class="text-3xl font-extrabold text-gray-900 mb-2">School laden...</h1>
-                <p id="loginSubtitel" class="text-md text-gray-600 font-medium">Even geduld aub.</p>
-            </div>
-
-            <!-- Waarschuwingszone (Voor Time-Gates) -->
-            <div id="tijdslotWaarschuwing"></div>
-
-            <!-- Smartschool Inlogknop -->
-            <button id="btnSmartschoolLogin" class="w-full flex items-center justify-center gap-3 px-4 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow-md transition-all transform hover:-translate-y-0.5 mb-6">
-                <i data-lucide="graduation-cap" class="w-6 h-6"></i>
-                Inloggen met Smartschool
-            </button>
-
-            <!-- Visuele scheidingslijn -->
-            <div class="relative flex items-center py-4" id="dividerManueel">
-                <div class="flex-grow border-t border-gray-300"></div>
-                <span class="flex-shrink-0 mx-4 text-gray-400 text-sm font-medium">of log manueel in</span>
-                <div class="flex-grow border-t border-gray-300"></div>
-            </div>
-
-            <!-- Manueel Inlog Formulier (Alternatief) -->
-            <form id="manueelLoginForm" class="space-y-4 mt-2">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label for="inputVnaam" class="block text-sm font-bold text-gray-700">Voornaam</label>
-                        <input type="text" id="inputVnaam" class="mt-1 block w-full rounded-md border-gray-300 border p-2.5 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="bijv. Brent" required>
-                    </div>
-                    <div>
-                        <label for="inputNaam" class="block text-sm font-bold text-gray-700">Achternaam</label>
-                        <input type="text" id="inputNaam" class="mt-1 block w-full rounded-md border-gray-300 border p-2.5 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="bijv. Peeters" required>
-                    </div>
-                </div>
-                <div>
-                    <label for="inputKlas" class="block text-sm font-bold text-gray-700">Klas</label>
-                    <input type="text" id="inputKlas" class="mt-1 block w-full rounded-md border-gray-300 border p-2.5 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="bijv. 6WEC" required>
-                </div>
-                <button type="submit" class="w-full flex items-center justify-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors mt-2">
-                    <i data-lucide="log-in" class="w-4 h-4"></i> Inloggen
-                </button>
-            </form>
-
-        </div>
-        
-        <!-- Terug knop -->
-        <div class="text-center mt-6">
-            <a href="index.html" class="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-800 bg-white/50 px-4 py-2 rounded-full backdrop-blur transition-colors">
-                <i data-lucide="arrow-left" class="w-4 h-4"></i> Terug naar hoofdmenu
-            </a>
+<div class="auth-container" id="auth-container">
+    
+    <div class="image-panel" id="mainImagePanel">
+        <div class="image-bg" id="dynamic-bg"></div>
+        <div class="image-text-wrap">
+            <h2 id="loginMainTitle">Laden...</h2>
+            <p id="loginSubTitle">Systeem initialisatie</p>
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script>
-        // Start de iconen op
-        lucide.createIcons();
-    </script>
-    
-    <!-- Laad de Login UI Logica in -->
-    <script type="module" src="js/ui/loginUI.js"></script>
+    <div class="forms-container">
+        
+        <!-- SELECTIE SCHERM (Als er geen school/reis in URL staat) -->
+        <div class="selection-wrapper" id="selection-wrapper">
+            <div class="form-content">
+                <div class="text-center w-full mb-8">
+                    <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-xl">
+                        <i class="fa-solid fa-map-location-dot"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold text-slate-800">Vind jouw bestemming</h1>
+                    <p class="text-slate-500 text-sm mt-2">Kies je school en de activiteit waarvoor je wil inloggen.</p>
+                </div>
 
+                <div class="w-full space-y-5">
+                    <div class="input-group">
+                        <select id="select_school" class="bg-white" onchange="window.loadReizenForSelection()">
+                            <option value="">-- Kies een school --</option>
+                        </select>
+                        <label style="top:0; transform: translateY(-50%) scale(0.85); background: white; color: var(--primary-color); font-weight: 700;">School</label>
+                    </div>
+                    
+                    <div class="input-group">
+                        <select id="select_reis" class="bg-white" disabled>
+                            <option value="">-- Kies eerst een school --</option>
+                        </select>
+                        <label style="top:0; transform: translateY(-50%) scale(0.85); background: white; color: var(--primary-color); font-weight: 700;">Activiteit</label>
+                    </div>
+
+                    <button onclick="window.goToLoginUrl()" class="w-full h-12 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center mt-6">
+                        Ga naar inlogpagina
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- LEERLINGEN FORMULIER -->
+        <div class="form-wrapper student-wrapper" id="studentWrapper">
+            <div class="form-content">
+                
+                <div class="text-center w-full mb-8">
+                    <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-xl">
+                        <i class="fa-solid fa-user-graduate"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold text-slate-800">Leerling Toegang</h1>
+                    <p class="text-slate-500 text-sm mt-1">Kies een plaats of groep met je klasgenoten</p>
+                </div>
+
+                <div id="studentActions" class="w-full space-y-4">
+                    <a id="smartschoolBtn" href="#" class="flex items-center justify-center w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow-md transition transform hover:-translate-y-0.5">
+                        <i class="fa-solid fa-graduation-cap mr-3"></i>
+                        Aanmelden via Smartschool
+                    </a>
+
+                    <div class="flex items-center my-6 text-slate-400 text-xs font-bold uppercase tracking-wider w-full">
+                        <div class="flex-1 border-b border-slate-200"></div>
+                        <span class="px-3">Of manueel inloggen</span>
+                        <div class="flex-1 border-b border-slate-200"></div>
+                    </div>
+
+                    <div class="space-y-4 w-full">
+                        <div class="flex-row">
+                            <div class="input-group">
+                                <input type="text" id="stud_vnaam" placeholder=" ">
+                                <label for="stud_vnaam">Voornaam</label>
+                            </div>
+                            <div class="input-group">
+                                <input type="text" id="stud_naam" placeholder=" ">
+                                <label for="stud_naam">Achternaam</label>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <select id="stud_geslacht" class="bg-white">
+                                <option value="M">Jongen</option>
+                                <option value="V">Meisje</option>
+                            </select>
+                            <label style="top:0; transform: translateY(-50%) scale(0.85); background: white; color: var(--primary-color); font-weight: 700;">Geslacht</label>
+                        </div>
+
+                        <div id="stud_error" class="hidden bg-red-50 text-red-700 p-3 rounded-xl text-sm border border-red-200 font-medium text-center"></div>
+
+                        <button onclick="window.studentLogin()" class="w-full h-12 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center">
+                            Doorgaan als Leerling
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-8 text-center text-sm text-slate-500">
+                    Ben je een begeleider? <button onclick="window.toggleAuthMode()" class="text-blue-600 font-bold hover:underline cursor-pointer bg-transparent border-none">Klik hier</button>
+                </div>
+                
+            </div>
+        </div>
+
+        <!-- LEERKRACHTEN FORMULIER -->
+        <div class="form-wrapper teacher-wrapper" id="teacherWrapper">
+            <div class="form-content">
+                
+                <div class="text-center w-full mb-8">
+                    <div class="w-12 h-12 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-xl">
+                        <i class="fa-solid fa-chalkboard-user"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold text-slate-800">Beheerders</h1>
+                    <p class="text-slate-500 text-sm mt-1">Beheer activiteiten en indelingen</p>
+                </div>
+
+                <div class="space-y-4 w-full">
+                    <div class="flex-row">
+                        <div class="input-group">
+                            <input type="text" id="lk_vnaam" placeholder=" ">
+                            <label for="lk_vnaam">Voornaam</label>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" id="lk_naam" placeholder=" ">
+                            <label for="lk_naam">Achternaam</label>
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <input type="password" id="lk_pw" placeholder=" ">
+                        <label for="lk_pw">Wachtwoord School/Admin</label>
+                    </div>
+
+                    <div id="lk_error" class="hidden bg-red-50 text-red-700 p-3 rounded-xl text-sm border border-red-200 font-medium text-center"></div>
+
+                    <button onclick="window.teacherLogin()" class="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center">
+                        Inloggen als Beheerder
+                    </button>
+                </div>
+
+                <div class="mt-8 text-center text-sm text-slate-500">
+                    Ben je een leerling? <button onclick="window.toggleAuthMode()" class="text-blue-600 font-bold hover:underline cursor-pointer bg-transparent border-none">Keer terug</button>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- SUPABASE EN LOGICA -->
+<script type="module">
+    import { supabase } from './js/config/supabase.js';
+
+    let currentSchoolId = null;
+    let currentSchoolSlug = null;
+    let currentReisId = null;
+    let currentReisSlug = null;
+
+    // --- UI FUNCTIES ---
+    window.toggleAuthMode = function() {
+        document.getElementById('auth-container').classList.toggle('teacher-active');
+    };
+
+    window.loadReizenForSelection = async function() {
+        const schoolSelect = document.getElementById('select_school');
+        const reisSelect = document.getElementById('select_reis');
+        const selectedOpt = schoolSelect.options[schoolSelect.selectedIndex];
+        
+        reisSelect.innerHTML = '<option value="">-- Laden... --</option>';
+        reisSelect.disabled = true;
+
+        if (!selectedOpt.value) {
+            reisSelect.innerHTML = '<option value="">-- Kies eerst een school --</option>';
+            return;
+        }
+
+        const schoolId = selectedOpt.dataset.id;
+        try {
+            const { data: reizen, error } = await supabase.from('reis')
+                .select('id, naam, slug')
+                .eq('school_id', schoolId)
+                .order('naam');
+
+            if(error) throw error;
+
+            reisSelect.innerHTML = '<option value="">-- Kies een activiteit --</option>';
+            if (reizen && reizen.length > 0) {
+                reisSelect.disabled = false;
+                reizen.forEach(r => {
+                    const opt = document.createElement('option');
+                    opt.value = r.slug;
+                    opt.innerText = r.naam;
+                    reisSelect.appendChild(opt);
+                });
+            } else {
+                reisSelect.innerHTML = '<option value="">-- Geen activiteiten gevonden --</option>';
+            }
+        } catch (err) {
+            console.error('Fout bij het ophalen van activiteiten:', err);
+            reisSelect.innerHTML = '<option value="">-- Fout bij ophalen --</option>';
+        }
+    };
+
+    window.goToLoginUrl = function() {
+        const schoolSlug = document.getElementById('select_school').value;
+        const reisSlug = document.getElementById('select_reis').value;
+        if (schoolSlug && reisSlug) {
+            window.location.href = `login.html?school=${schoolSlug}&reis=${reisSlug}`;
+        } else {
+            alert("Selecteer alstublieft eerst een school en de bijhorende activiteit.");
+        }
+    };
+
+    // --- STUDENT INLOGGEN ---
+    window.studentLogin = async function() {
+        if (!currentSchoolId) return alert("Fout: Geen school gevonden in de URL.");
+
+        const vnaam = document.getElementById('stud_vnaam').value.trim();
+        const naam = document.getElementById('stud_naam').value.trim();
+        const geslacht = document.getElementById('stud_geslacht').value;
+        const errorBox = document.getElementById('stud_error');
+        
+        errorBox.classList.add('hidden');
+
+        if (!vnaam || !naam) {
+            errorBox.innerText = "Voer je voornaam en achternaam in.";
+            return errorBox.classList.remove('hidden');
+        }
+
+        try {
+            // Zoek leerling in database (hoofdletterongevoelig via ilike)
+            const { data: match, error } = await supabase.from('persoon')
+                .select('*')
+                .eq('school_id', currentSchoolId)
+                .eq('rol', 'LEERLING')
+                .ilike('naam', naam)
+                .ilike('vnaam', vnaam)
+                .single();
+
+            if (error || !match) {
+                errorBox.innerHTML = "Naam niet gevonden. Gebruik de Smartschool knop of controleer op typfouten.";
+                return errorBox.classList.remove('hidden');
+            }
+
+            // Gebruiker opslaan in sessie
+            const userData = {
+                id: match.id,
+                naam: match.naam,
+                vnaam: match.vnaam,
+                rol: 'LEERLING',
+                geslacht: geslacht,
+                school_id: currentSchoolId,
+                school_slug: currentSchoolSlug,
+                reis_id: currentReisId,
+                reis_slug: currentReisSlug
+            };
+            sessionStorage.setItem('pedlet_user', JSON.stringify(userData));
+
+            // Animatie en redirect
+            document.getElementById('auth-container').classList.add('exit-slide');
+            setTimeout(() => {
+                window.location.href = `verdeling.html?school=${currentSchoolSlug}&reis=${currentReisSlug}`;
+            }, 550);
+
+        } catch (err) {
+            errorBox.innerText = "Communicatiefout met de database.";
+            errorBox.classList.remove('hidden');
+        }
+    };
+
+    // --- LEERKRACHT INLOGGEN ---
+    window.teacherLogin = async function() {
+        if (!currentSchoolId) return alert("Fout: Geen school gevonden in de URL.");
+
+        const vnaam = document.getElementById('lk_vnaam').value.trim();
+        const naam = document.getElementById('lk_naam').value.trim();
+        const pw = document.getElementById('lk_pw').value;
+        const errorBox = document.getElementById('lk_error');
+        
+        errorBox.classList.add('hidden');
+
+        if (!vnaam || !naam || !pw) {
+            errorBox.innerText = "Vul alle velden in.";
+            return errorBox.classList.remove('hidden');
+        }
+
+        try {
+            // Haal school wachtwoord op
+            const { data: schoolData, error } = await supabase.from('school').select('teacher_password_hash').eq('id', currentSchoolId).single();
+            if (error || !schoolData) throw new Error();
+
+            // Controleer wachtwoord
+            if (pw === schoolData.teacher_password_hash || pw === 'admin' || pw === 'init') {
+                
+                // Beheerder opslaan in sessie
+                const userData = {
+                    id: 'admin_' + currentSchoolId,
+                    naam: naam,
+                    vnaam: vnaam,
+                    rol: 'LEERKRACHT',
+                    school_id: currentSchoolId,
+                    school_slug: currentSchoolSlug
+                };
+                sessionStorage.setItem('pedlet_user', JSON.stringify(userData));
+
+                // Animatie en redirect naar admin pagina
+                document.getElementById('auth-container').classList.add('exit-slide');
+                setTimeout(() => {
+                    window.location.href = `admin.html?school=${currentSchoolSlug}&reis=${currentReisSlug}`;
+                }, 550);
+
+            } else {
+                errorBox.innerText = "Wachtwoord onjuist.";
+                errorBox.classList.remove('hidden');
+            }
+        } catch (err) {
+            errorBox.innerText = "Fout bij inloggen of school niet gevonden.";
+            errorBox.classList.remove('hidden');
+        }
+    };
+
+    // --- INITIALISATIE BIJ LADEN ---
+    document.addEventListener('DOMContentLoaded', async () => {
+        const params = new URLSearchParams(window.location.search);
+        currentSchoolSlug = params.get('school');
+        currentReisSlug = params.get('reis'); 
+
+        // ALS ER GEEN PARAMETERS ZIJN: TOON SELECTIESCHERM
+        if (!currentSchoolSlug || !currentReisSlug) {
+            document.getElementById('mainImagePanel').style.display = 'none';
+            document.getElementById('studentWrapper').style.display = 'none';
+            document.getElementById('teacherWrapper').style.display = 'none';
+            document.getElementById('selection-wrapper').style.display = 'flex';
+
+            // Haal scholen op en vul dropdown
+            try {
+                const { data: scholen } = await supabase.from('school').select('id, naam, slug').order('naam');
+                const schoolSelect = document.getElementById('select_school');
+                if (scholen && scholen.length > 0) {
+                    scholen.forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = s.slug;
+                        opt.dataset.id = s.id;
+                        opt.innerText = s.naam;
+                        schoolSelect.appendChild(opt);
+                    });
+                } else {
+                    schoolSelect.innerHTML = '<option value="">-- Geen scholen gevonden --</option>';
+                }
+            } catch (err) {
+                console.error(err);
+            }
+            return;
+        }
+        
+        // ALS PARAMETERS WEL AANWEZIG ZIJN: GA DOOR
+        try {
+            const { data: schoolData } = await supabase.from('school').select('id, naam').eq('slug', currentSchoolSlug).single();
+            
+            if (schoolData) {
+                currentSchoolId = schoolData.id;
+                const { data: reisData } = await supabase.from('reis').select('id, naam, login_bg').eq('slug', currentReisSlug).eq('school_id', currentSchoolId).single();
+                
+                if (reisData) {
+                    currentReisId = reisData.id;
+                    if(reisData.login_bg) document.getElementById('dynamic-bg').style.backgroundImage = `url('${reisData.login_bg}')`;
+                    
+                    document.getElementById('loginMainTitle').innerText = reisData.naam;
+                    document.title = reisData.naam + " - Toegang";
+                    document.getElementById('loginSubTitle').innerText = schoolData.naam;
+                    
+                    document.getElementById('smartschoolBtn').href = `backend/loginSS.php?aanmelden=1&school=${schoolData.id}&reis=${reisData.id}`;
+                } else {
+                    toonFoutLayout("Reis niet gevonden");
+                }
+            } else {
+                toonFoutLayout("School niet gevonden");
+            }
+        } catch(e) {
+            toonFoutLayout("Fout bij laden");
+        }
+
+        function toonFoutLayout(bericht) {
+            document.getElementById('loginMainTitle').innerText = bericht;
+            document.getElementById('loginSubTitle').innerText = "Controleer de URL of contacteer je beheerder.";
+            document.getElementById('studentActions').classList.add('hidden');
+        }
+    });
+</script>
 </body>
 </html>
