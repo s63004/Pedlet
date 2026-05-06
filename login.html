@@ -3,10 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title id="pageTitle">Systeem Login</title>
+    <title>Inloggen | Pedlet</title>
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts & FontAwesome voor de specifieke look van het schuifsysteem -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Lucide Icons (voor compatibiliteit met rest van project) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
     <script>
         tailwind.config = {
             theme: {
@@ -17,6 +25,7 @@
             }
         }
     </script>
+    
     <style>
         :root {
             --primary-color: #2563eb;
@@ -99,15 +108,13 @@
         .input-group input, .input-group select {
             width: 100%; height: 48px; padding: 0 14px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; 
             color: var(--text-main); background-color: var(--input-bg); outline: none; transition: all 0.2s; font-family: 'Inter', sans-serif;
-            appearance: none;
         }
         .input-group input:focus, .input-group select:focus { border-color: var(--primary-color); background-color: #fff; box-shadow: 0 0 0 4px rgba(37,99,235,0.1); }
         .input-group label {
             position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--text-muted); 
             pointer-events: none; transition: all 0.2s ease; background: transparent; padding: 0 4px;
         }
-        .input-group input:focus + label, .input-group input:not(:placeholder-shown) + label,
-        .input-group select:focus + label, .input-group select:not(:empty) + label {
+        .input-group input:focus + label, .input-group input:not(:placeholder-shown) + label {
             top: 0; transform: translateY(-50%) scale(0.85); left: 10px; background: white; color: var(--primary-color); font-weight: 700;
         }
         
@@ -133,48 +140,41 @@
 
 <div class="auth-container" id="auth-container">
     
-    <!-- Geanimeerde Afbeelding Links/Boven -->
+    <!-- Het bewegende beeldpaneel -->
     <div class="image-panel" id="mainImagePanel">
-        <div class="image-bg" id="dynamic-bg" style="background-image: url('https://images.unsplash.com/photo-1517520287167-4bbf64a00d66?auto=format&fit=crop&q=80&w=1000');"></div>
+        <div class="image-bg" id="dynamic-bg"></div>
         <div class="image-text-wrap">
-            <h2 id="loginMainTitle">Laden...</h2>
-            <p id="loginSubTitle">Systeem initialisatie</p>
+            <!-- Deze titels worden door loginUI.js ingevuld -->
+            <h2 id="loginTitel">Laden...</h2>
+            <p id="loginSubtitel">School ophalen</p>
         </div>
     </div>
 
     <div class="forms-container">
         
-        <!-- HOOFD FORMULIER (Leerlingen + School selectie) -->
+        <!-- ========================================== -->
+        <!-- STUDENTEN PANEEL                           -->
+        <!-- ========================================== -->
         <div class="form-wrapper student-wrapper" id="studentWrapper">
             <div class="form-content">
                 
                 <div class="text-center w-full mb-8">
-                    <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-xl" id="formIcon">
-                        <i class="fa-solid fa-graduation-cap"></i>
+                    <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-xl">
+                        <i class="fa-solid fa-user-graduate"></i>
                     </div>
-                    <h1 class="text-2xl font-bold text-slate-800" id="formMainTitle">Welkom</h1>
-                    <p class="text-slate-500 text-sm mt-1" id="formSubTitle">Laden...</p>
+                    <h1 class="text-2xl font-bold text-slate-800">Leerling Toegang</h1>
+                    <p class="text-slate-500 text-sm mt-1">Kies een plaats of groep met je klasgenoten</p>
                 </div>
 
-                <!-- STATE 1: SCHOOL KIEZEN (Als er geen in URL staat) -->
-                <div id="schoolKiezerSectie" class="w-full space-y-4 hidden">
-                    <div class="input-group">
-                        <select id="select_school" class="bg-white">
-                            <option value="">-- Laden... --</option>
-                        </select>
-                        <label style="top:0; transform: translateY(-50%) scale(0.85); background: white; color: var(--primary-color); font-weight: 700;">Jouw School</label>
-                    </div>
-                    <button onclick="window.gaNaarSchool()" class="w-full h-12 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center mt-6">
-                        Doorgaan
-                    </button>
-                </div>
+                <!-- Hier komt de time-gate waarschuwing indien nodig -->
+                <div id="tijdslotWaarschuwing" class="w-full"></div>
 
-                <!-- STATE 2: INLOGGEN (Als school in URL staat) -->
-                <div id="studentActions" class="w-full space-y-4 hidden">
-                    <a id="smartschoolBtn" href="#" class="flex items-center justify-center w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow-md transition transform hover:-translate-y-0.5">
+                <div id="studentActions" class="w-full space-y-4">
+                    <!-- Smartschool Login Knop -->
+                    <button id="btnSmartschoolLogin" class="flex items-center justify-center w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow-md transition transform hover:-translate-y-0.5">
                         <i class="fa-solid fa-graduation-cap mr-3"></i>
                         Aanmelden via Smartschool
-                    </a>
+                    </button>
 
                     <div class="flex items-center my-6 text-slate-400 text-xs font-bold uppercase tracking-wider w-full">
                         <div class="flex-1 border-b border-slate-200"></div>
@@ -182,41 +182,39 @@
                         <div class="flex-1 border-b border-slate-200"></div>
                     </div>
 
-                    <div class="space-y-4 w-full">
+                    <!-- Manueel Formulier (Gekoppeld aan loginUI.js) -->
+                    <form id="manueelLoginForm" class="space-y-4 w-full">
                         <div class="flex-row">
                             <div class="input-group">
-                                <input type="text" id="stud_vnaam" placeholder=" ">
-                                <label for="stud_vnaam">Voornaam</label>
+                                <input type="text" id="inputVnaam" placeholder=" " required>
+                                <label for="inputVnaam">Voornaam</label>
                             </div>
                             <div class="input-group">
-                                <input type="text" id="stud_naam" placeholder=" ">
-                                <label for="stud_naam">Achternaam</label>
+                                <input type="text" id="inputNaam" placeholder=" " required>
+                                <label for="inputNaam">Achternaam</label>
                             </div>
                         </div>
                         <div class="input-group">
-                            <select id="stud_geslacht" class="bg-white">
-                                <option value="M">Jongen</option>
-                                <option value="V">Meisje</option>
-                            </select>
-                            <label style="top:0; transform: translateY(-50%) scale(0.85); background: white; color: var(--primary-color); font-weight: 700;">Geslacht</label>
+                            <input type="text" id="inputKlas" placeholder=" " required>
+                            <label for="inputKlas">Klas (bijv. 6WEC)</label>
                         </div>
 
-                        <div id="stud_error" class="hidden bg-red-50 text-red-700 p-3 rounded-xl text-sm border border-red-200 font-medium text-center"></div>
-
-                        <button onclick="window.studentLogin()" class="w-full h-12 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center">
+                        <button type="submit" class="w-full h-12 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center">
                             Doorgaan als Leerling
                         </button>
-                    </div>
+                    </form>
                 </div>
 
-                <div class="mt-8 text-center text-sm text-slate-500 hidden" id="toTeacherBtnContainer">
-                    Ben je een begeleider? <button onclick="window.toggleAuthMode()" class="text-blue-600 font-bold hover:underline cursor-pointer bg-transparent border-none">Klik hier</button>
+                <div class="mt-8 text-center text-sm text-slate-500">
+                    Ben je een begeleider? <button type="button" onclick="toggleAuthMode()" class="text-blue-600 font-bold hover:underline cursor-pointer bg-transparent border-none">Klik hier</button>
                 </div>
                 
             </div>
         </div>
 
-        <!-- LEERKRACHTEN FORMULIER -->
+        <!-- ========================================== -->
+        <!-- LEERKRACHTEN PANEEL                        -->
+        <!-- ========================================== -->
         <div class="form-wrapper teacher-wrapper" id="teacherWrapper">
             <div class="form-content">
                 
@@ -224,36 +222,34 @@
                     <div class="w-12 h-12 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-xl">
                         <i class="fa-solid fa-chalkboard-user"></i>
                     </div>
-                    <h1 class="text-2xl font-bold text-slate-800" id="teacherMainTitle">Beheerders</h1>
-                    <p class="text-slate-500 text-sm mt-1">Beheer alle activiteiten van je school</p>
+                    <h1 class="text-2xl font-bold text-slate-800">Beheerders</h1>
+                    <p class="text-slate-500 text-sm mt-1">Beheer activiteiten en indelingen</p>
                 </div>
 
-                <div id="teacherActions" class="space-y-4 w-full">
+                <form id="teacherLoginForm" class="space-y-4 w-full">
                     <div class="flex-row">
                         <div class="input-group">
-                            <input type="text" id="lk_vnaam" placeholder=" ">
-                            <label for="lk_vnaam">Voornaam</label>
+                            <input type="text" id="inputLkrVnaam" placeholder=" " required>
+                            <label for="inputLkrVnaam">Voornaam</label>
                         </div>
                         <div class="input-group">
-                            <input type="text" id="lk_naam" placeholder=" ">
-                            <label for="lk_naam">Achternaam</label>
+                            <input type="text" id="inputLkrNaam" placeholder=" " required>
+                            <label for="inputLkrNaam">Achternaam</label>
                         </div>
                     </div>
-                    
+
                     <div class="input-group">
-                        <input type="password" id="lk_pw" placeholder=" ">
-                        <label for="lk_pw">Wachtwoord School/Admin</label>
+                        <input type="password" id="inputLkrWachtwoord" placeholder=" " required>
+                        <label for="inputLkrWachtwoord">Schoolwachtwoord</label>
                     </div>
 
-                    <div id="lk_error" class="hidden bg-red-50 text-red-700 p-3 rounded-xl text-sm border border-red-200 font-medium text-center"></div>
-
-                    <button onclick="window.teacherLogin()" class="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center">
+                    <button type="submit" class="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center">
                         Inloggen als Beheerder
                     </button>
-                </div>
+                </form>
 
-                <div class="mt-8 text-center text-sm text-slate-500" id="toStudentBtnContainer">
-                    Ben je een leerling? <button onclick="window.toggleAuthMode()" class="text-blue-600 font-bold hover:underline cursor-pointer bg-transparent border-none">Keer terug</button>
+                <div class="mt-8 text-center text-sm text-slate-500">
+                    Ben je een leerling? <button type="button" onclick="toggleAuthMode()" class="text-blue-600 font-bold hover:underline cursor-pointer bg-transparent border-none">Keer terug</button>
                 </div>
 
             </div>
@@ -262,205 +258,18 @@
     </div>
 </div>
 
-<!-- SUPABASE EN LOGICA -->
-<script type="module">
-    import { supabase } from './js/config/supabase.js';
-
-    let currentSchoolId = null;
-    let currentSchoolSlug = null;
-
-    // --- UI FUNCTIES ---
-    window.toggleAuthMode = function() {
+<!-- Scripts -->
+<script>
+    lucide.createIcons();
+    
+    // Functie voor de slide animatie
+    function toggleAuthMode() {
         document.getElementById('auth-container').classList.toggle('teacher-active');
-    };
-
-    window.gaNaarSchool = function() {
-        const slug = document.getElementById('select_school').value;
-        if (slug) {
-            window.location.href = `login.html?school=${slug}`;
-        } else {
-            alert("Selecteer alstublieft eerst een school uit de lijst.");
-        }
-    };
-
-    // --- STUDENT INLOGGEN ---
-    window.studentLogin = async function() {
-        if (!currentSchoolId) return alert("Fout: Geen school context.");
-
-        const vnaam = document.getElementById('stud_vnaam').value.trim();
-        const naam = document.getElementById('stud_naam').value.trim();
-        const geslacht = document.getElementById('stud_geslacht').value;
-        const errorBox = document.getElementById('stud_error');
-        
-        errorBox.classList.add('hidden');
-
-        if (!vnaam || !naam) {
-            errorBox.innerText = "Voer je voornaam en achternaam in.";
-            return errorBox.classList.remove('hidden');
-        }
-
-        try {
-            // Zoek leerling in database (hoofdletterongevoelig via ilike)
-            const { data: match, error } = await supabase.from('persoon')
-                .select('*')
-                .eq('school_id', currentSchoolId)
-                .eq('rol', 'LEERLING')
-                .ilike('naam', naam)
-                .ilike('vnaam', vnaam)
-                .single();
-
-            if (error || !match) {
-                errorBox.innerHTML = "Naam niet gevonden. Gebruik de Smartschool knop of controleer op typfouten.";
-                return errorBox.classList.remove('hidden');
-            }
-
-            // Gebruiker opslaan in sessie
-            const userData = {
-                id: match.id,
-                naam: match.naam,
-                vnaam: match.vnaam,
-                rol: 'LEERLING',
-                geslacht: geslacht,
-                school_id: currentSchoolId,
-                school_slug: currentSchoolSlug
-            };
-            sessionStorage.setItem('pedlet_user', JSON.stringify(userData));
-
-            // Animatie en redirect naar Centraal Portaal (index.html)
-            document.getElementById('auth-container').classList.add('exit-slide');
-            setTimeout(() => {
-                window.location.href = `index.html?school=${currentSchoolSlug}`;
-            }, 550);
-
-        } catch (err) {
-            errorBox.innerText = "Communicatiefout met de database.";
-            errorBox.classList.remove('hidden');
-        }
-    };
-
-    // --- LEERKRACHT INLOGGEN ---
-    window.teacherLogin = async function() {
-        if (!currentSchoolId) return alert("Fout: Geen school context.");
-
-        const vnaam = document.getElementById('lk_vnaam').value.trim();
-        const naam = document.getElementById('lk_naam').value.trim();
-        const pw = document.getElementById('lk_pw').value;
-        const errorBox = document.getElementById('lk_error');
-        
-        errorBox.classList.add('hidden');
-
-        if (!vnaam || !naam || !pw) {
-            errorBox.innerText = "Vul alle velden in.";
-            return errorBox.classList.remove('hidden');
-        }
-
-        try {
-            // Haal school wachtwoord op
-            const { data: schoolData, error } = await supabase.from('school').select('teacher_password_hash').eq('id', currentSchoolId).single();
-            if (error || !schoolData) throw new Error();
-
-            // Controleer wachtwoord
-            if (pw === schoolData.teacher_password_hash || pw === 'admin' || pw === 'init') {
-                
-                // Beheerder opslaan in sessie
-                const userData = {
-                    id: 'admin_' + currentSchoolId,
-                    naam: naam,
-                    vnaam: vnaam,
-                    rol: 'LEERKRACHT',
-                    school_id: currentSchoolId,
-                    school_slug: currentSchoolSlug
-                };
-                sessionStorage.setItem('pedlet_user', JSON.stringify(userData));
-
-                // Animatie en redirect naar admin pagina
-                document.getElementById('auth-container').classList.add('exit-slide');
-                setTimeout(() => {
-                    window.location.href = `admin.html?school=${currentSchoolSlug}`;
-                }, 550);
-
-            } else {
-                errorBox.innerText = "Wachtwoord onjuist.";
-                errorBox.classList.remove('hidden');
-            }
-        } catch (err) {
-            errorBox.innerText = "Fout bij inloggen of school niet gevonden.";
-            errorBox.classList.remove('hidden');
-        }
-    };
-
-    // --- INITIALISATIE BIJ LADEN ---
-    document.addEventListener('DOMContentLoaded', async () => {
-        const params = new URLSearchParams(window.location.search);
-        currentSchoolSlug = params.get('school');
-
-        // ALS ER GEEN SCHOOL SLUG IS: TOON KEUZE MENU
-        if (!currentSchoolSlug) {
-            // Update Image Panel (Links)
-            document.getElementById('loginMainTitle').innerText = "Pedlet Portaal";
-            document.getElementById('loginSubTitle').innerText = "Beheer je schoolreizen en activiteiten";
-            
-            // Update Formulier (Rechts)
-            document.getElementById('formIcon').innerHTML = '<i class="fa-solid fa-map-location-dot"></i>';
-            document.getElementById('formMainTitle').innerText = "Vind jouw school";
-            document.getElementById('formSubTitle').innerText = "Selecteer je school om in te loggen";
-            
-            document.getElementById('schoolKiezerSectie').classList.remove('hidden');
-
-            try {
-                const { data: scholen } = await supabase.from('school').select('id, naam, slug').order('naam');
-                const schoolSelect = document.getElementById('select_school');
-                schoolSelect.innerHTML = '<option value="">-- Kies een school --</option>';
-                
-                if (scholen && scholen.length > 0) {
-                    scholen.forEach(s => {
-                        schoolSelect.innerHTML += `<option value="${s.slug}">${s.naam}</option>`;
-                    });
-                } else {
-                    schoolSelect.innerHTML = '<option value="">-- Geen scholen gevonden --</option>';
-                }
-            } catch (err) {
-                console.error(err);
-            }
-            return;
-        }
-        
-        // ALS DE SCHOOL SLUG WEL AANWEZIG IS: LAAD LOGIN FORMULIER
-        try {
-            const { data: schoolData, error } = await supabase.from('school').select('id, naam').eq('slug', currentSchoolSlug).single();
-            
-            if (error || !schoolData) throw new Error("School niet gevonden");
-            
-            currentSchoolId = schoolData.id;
-            
-            // Update Image Panel (Links)
-            document.getElementById('loginMainTitle').innerText = schoolData.naam;
-            document.getElementById('loginSubTitle').innerText = "Welkom op het platform";
-            document.title = schoolData.naam + " - Pedlet Login";
-
-            // Update Formulier Leerlingen (Rechts)
-            document.getElementById('formMainTitle').innerText = "Inloggen bij " + schoolData.naam;
-            document.getElementById('formSubTitle').innerText = "Log in om je reizen te bekijken";
-            
-            // Update Formulier Leerkrachten
-            document.getElementById('teacherMainTitle').innerText = "Beheer " + schoolData.naam;
-
-            // Toon inlog elementen
-            document.getElementById('studentActions').classList.remove('hidden');
-            document.getElementById('toTeacherBtnContainer').classList.remove('hidden');
-            
-            // Smartschool
-            document.getElementById('smartschoolBtn').href = `backend/loginSS.php?aanmelden=1&school=${schoolData.id}`;
-            
-        } catch(e) {
-            // School niet gevonden -> Toon fout
-            document.getElementById('loginMainTitle').innerText = "Fout";
-            document.getElementById('loginSubTitle').innerText = "School niet gevonden in de database.";
-            
-            document.getElementById('formMainTitle').innerText = "Oeps!";
-            document.getElementById('formSubTitle').innerText = "Controleer of de link klopt of ga terug naar de startpagina.";
-        }
-    });
+    }
 </script>
+
+<!-- Laad de Login UI Logica (Dit bestand passen we in de volgende stap aan!) -->
+<script type="module" src="js/ui/loginUI.js"></script>
+
 </body>
 </html>
