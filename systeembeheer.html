@@ -277,7 +277,7 @@
     <div id="schoolModal" class="fixed inset-0 bg-slate-900/80 flex items-center justify-center hidden z-50">
         <div class="glass-panel p-6 rounded-xl w-full max-w-md text-slate-200">
             <h3 id="schoolModalTitel" class="text-xl font-bold mb-1 text-white">Nieuwe School & Admin</h3>
-            <p id="schoolModalDesc" class="text-xs text-slate-400 mb-4">De contactgegevens worden gebruikt om de eerste beheerder voor deze school te maken.</p>
+            <p id="schoolModalDesc" class="text-xs text-slate-400 mb-4">Stel hier de toegang in voor deze school.</p>
             
             <input type="hidden" id="editSchoolId">
             <input id="newSchoolNaam" type="text" placeholder="Naam school (bijv. Sint-Ursula)" class="w-full bg-slate-800 border-slate-600 rounded p-2.5 mb-3 text-white focus:border-emerald-500 outline-none" required>
@@ -286,6 +286,11 @@
                 <option value="">-- Geen koepel (Onafhankelijk) --</option>
             </select>
             
+            <div class="border-t border-slate-700 my-4 pt-4">
+                <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Beveiliging (Leerkrachten Login)</label>
+                <input id="newSchoolPassword" type="text" placeholder="Wachtwoord (bijv. welkom123)" class="w-full bg-slate-800 border-slate-600 rounded p-2.5 mb-3 text-white focus:border-emerald-500 outline-none">
+            </div>
+
             <div id="adminContactDiv" class="border-t border-slate-700 my-4 pt-4">
                 <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Contact Admin Profiel</label>
                 <input id="newSchoolEmail" type="email" placeholder="Algemeen E-mailadres" class="w-full bg-slate-800 border-slate-600 rounded p-2.5 mb-3 text-white focus:border-emerald-500 outline-none">
@@ -839,6 +844,9 @@
             document.getElementById('newSchoolNaam').value = '';
             document.getElementById('newSchoolSlug').value = '';
             
+            document.getElementById('newSchoolPassword').value = '';
+            document.getElementById('newSchoolPassword').placeholder = 'Wachtwoord (bijv. welkom123)';
+
             const koepelSelect = document.getElementById('newSchoolKoepel');
             koepelSelect.innerHTML = '<option value="">-- Geen koepel (Onafhankelijk) --</option>';
             const { data } = await supabase.from('koepel').select('id, naam').order('naam');
@@ -855,6 +863,9 @@
             document.getElementById('editSchoolId').value = id;
             document.getElementById('newSchoolNaam').value = naam;
             document.getElementById('newSchoolSlug').value = slug;
+            
+            document.getElementById('newSchoolPassword').value = '';
+            document.getElementById('newSchoolPassword').placeholder = 'Nieuw wachtwoord (laat leeg om te behouden)';
 
             const koepelSelect = document.getElementById('newSchoolKoepel');
             koepelSelect.innerHTML = '<option value="">-- Geen koepel (Onafhankelijk) --</option>';
@@ -870,20 +881,28 @@
             const slug = document.getElementById('newSchoolSlug').value;
             const koepelVal = document.getElementById('newSchoolKoepel').value;
             const koepel_id = koepelVal ? parseInt(koepelVal) : null;
+            const password = document.getElementById('newSchoolPassword').value;
 
             if(!naam || !slug) return alert("Vul schoolnaam en slug in.");
 
             try {
                 if(isEdit) {
                     const id = parseInt(document.getElementById('editSchoolId').value);
-                    const { error } = await supabase.from('school').update({naam, slug, koepel_id}).eq('id', id);
+                    let updateData = {naam, slug, koepel_id};
+                    
+                    if (password.trim() !== '') {
+                        updateData.teacher_password_hash = password.trim();
+                    }
+
+                    const { error } = await supabase.from('school').update(updateData).eq('id', id);
                     if(error) throw error;
                     await voegLogToe('BEHEER', `School bijgewerkt: '${naam}'`, 'Superadmin');
                 } else {
                     const email = document.getElementById('newSchoolEmail').value;
                     if(!email) return alert("Vul het admin e-mailadres in.");
+                    if(!password) return alert("Vul een wachtwoord in voor de leerkrachten.");
                     
-                    const { data: sData, error: sErr } = await supabase.from('school').insert([{naam, slug, koepel_id, teacher_password_hash: 'init'}]).select().single();
+                    const { data: sData, error: sErr } = await supabase.from('school').insert([{naam, slug, koepel_id, teacher_password_hash: password}]).select().single();
                     if(sErr) throw sErr;
                     
                     await supabase.from('persoon').insert([{
