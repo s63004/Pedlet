@@ -26,7 +26,7 @@
             try {
                 // We testen de connectie door een simpele query te doen op de 'kamers' tabel
                 const { data, error } = await supabase
-                    .from('kamers')
+                    .from('kamer')
                     .select('*')
                     .limit(1);
 
