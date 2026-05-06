@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kies je plaats | Pedlet</title>
+    
+    <!-- Tailwind CSS voor snelle, moderne styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        body {
+            background-color: #f9fafb; /* gray-50 */
+        }
+        /* Verberg scrollbar in de voortgangsbalk maar houd functionaliteit */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Zachte animaties voor modal popups */
+        .animate-fade-in-up {
+            animation: fadeInUp 0.3s ease-out forwards;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="text-gray-800 font-sans antialiased flex flex-col min-h-screen">
+
+    <!-- Navigatiebalk -->
+    <nav class="bg-white shadow-sm sticky top-0 z-40 border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <!-- Logo & Titel -->
+                <div class="flex items-center gap-2">
+                    <i data-lucide="layers" class="text-indigo-600 h-7 w-7"></i>
+                    <span class="font-bold text-xl text-indigo-900 tracking-tight hidden sm:block">Pedlet</span>
+                </div>
+                
+                <!-- Leerling Info & Uitloggen -->
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
+                        <div class="bg-indigo-100 text-indigo-600 rounded-full p-1">
+                            <i data-lucide="user" class="w-4 h-4"></i>
+                        </div>
+                        <span id="gebruikerNaamDisplay" class="text-sm font-bold text-gray-700">Laden...</span>
+                    </div>
+                    
+                    <button id="btnUitloggen" class="text-gray-500 hover:text-red-600 p-2 rounded-full hover:bg-red-50 transition-colors" title="Uitloggen">
+                        <i data-lucide="log-out" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hoofdinhoud Container (Kan overschreven worden als de student 'klaar' is) -->
+    <main id="hoofdInhoudStudent" class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+        
+        <!-- Voortgangsbalk (Hier injecteert components.js de stappen) -->
+        <div class="mb-8">
+            <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                <i data-lucide="map" class="w-5 h-5 text-indigo-500"></i> Jouw reisschema
+            </h2>
+            <div id="voortgangsBalkContainer" class="w-full">
+                <!-- Wordt dynamisch gevuld -->
+                <div class="animate-pulse flex gap-4">
+                    <div class="h-24 bg-gray-200 rounded-lg flex-1"></div>
+                    <div class="h-24 bg-gray-200 rounded-lg flex-1"></div>
+                    <div class="h-24 bg-gray-200 rounded-lg flex-1 hidden sm:block"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bedieningspaneel: Filters en Layout Weergave -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6 flex flex-col sm:flex-row justify-between items-center gap-4 sticky top-[72px] z-30">
+            
+            <!-- Filter -->
+            <label class="flex items-center gap-2 cursor-pointer bg-gray-50 px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors w-full sm:w-auto">
+                <input type="checkbox" id="toggleNietVol" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
+                <span class="text-sm font-bold text-gray-700">Verberg volle groepen</span>
+            </label>
+
+            <!-- Layout Knoppen (Blokjes / Lijst) -->
+            <div class="flex bg-gray-100 p-1 rounded-lg w-full sm:w-auto justify-center">
+                <button id="btnLayoutGrid" class="flex-1 sm:flex-none px-4 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 text-gray-700 hover:text-indigo-600 bg-indigo-100 shadow-sm" title="Blokjes weergave">
+                    <i data-lucide="layout-grid" class="w-4 h-4"></i> <span class="sm:hidden">Raster</span>
+                </button>
+                <button id="btnLayoutList" class="flex-1 sm:flex-none px-4 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 text-gray-600 hover:text-indigo-600 hover:bg-gray-200" title="Lijst weergave">
+                    <i data-lucide="list" class="w-4 h-4"></i> <span class="sm:hidden">Lijst</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Kamers / Groepen Container -->
+        <div class="relative min-h-[300px]">
+            <!-- Laad Spinner -->
+            <div id="kamersLadenSpinner" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-50/80 z-10 hidden">
+                <i data-lucide="loader-2" class="w-10 h-10 text-indigo-500 animate-spin mb-3"></i>
+                <p class="text-indigo-800 font-medium">Indeling ophalen...</p>
+            </div>
+            
+            <!-- Hier tekent studentUI.js de kamers -->
+            <div id="kamersContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
+                <!-- Kamers verschijnen hier -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Scripts Inladen -->
+    <script>
+        // Start de iconen op
+        lucide.createIcons();
+    </script>
+    
+    <!-- Laad de Student UI Logica in -->
+    <script type="module" src="js/ui/studentUI.js"></script>
+
+</body>
+</html>

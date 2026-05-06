@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedlet | Leerkrachten Dashboard</title>
+    
+    <!-- Tailwind CSS voor snelle, moderne styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- SortableJS voor Drag & Drop van leerlingen -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
+    <style>
+        /* Speciale styling voor de drag & drop animaties */
+        .sortable-ghost {
+            opacity: 0.4;
+            background-color: #e0e7ff; /* indigo-100 */
+        }
+        .sortable-drag {
+            cursor: grabbing !important;
+        }
+        body {
+            background-color: #f3f4f6; /* gray-100 */
+        }
+    </style>
+</head>
+<body class="text-gray-800 font-sans antialiased flex flex-col min-h-screen">
+
+    <!-- Navigatiebalk -->
+    <nav class="bg-indigo-700 shadow-md sticky top-0 z-50 text-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center gap-3">
+                    <i data-lucide="shield-check" class="h-8 w-8 text-indigo-200"></i>
+                    <div>
+                        <span class="font-bold text-xl tracking-tight block leading-tight">Pedlet Beheer</span>
+                        <span class="text-xs text-indigo-200">Leerkrachten Dashboard</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a href="verdeling.html" class="flex items-center gap-2 text-sm font-medium text-indigo-100 hover:text-white transition-colors">
+                        <i data-lucide="eye" class="w-4 h-4"></i> Naar Leerlingenweergave
+                    </a>
+                    <div class="w-px h-6 bg-indigo-500 mx-2"></div>
+                    <button id="btnUitloggen" onclick="sessionStorage.removeItem('pedlet_user'); window.location.href='login.html';" class="flex items-center gap-2 text-sm font-medium bg-indigo-800 hover:bg-indigo-900 px-3 py-2 rounded transition-colors">
+                        <i data-lucide="log-out" class="w-4 h-4"></i> Uitloggen
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hoofdinhoud -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        
+        <!-- Bovenste Controlepaneel (Selecties & Filters) -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                
+                <!-- Dropdowns voor Reis en Hotel -->
+                <div class="flex flex-col sm:flex-row gap-4 flex-grow">
+                    <div class="flex-1">
+                        <label for="reisSelectie" class="block text-sm font-bold text-gray-700 mb-1">Kies een Activiteit/Reis</label>
+                        <select id="reisSelectie" class="block w-full rounded-md border-gray-300 border p-2.5 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 bg-gray-50">
+                            <option value="">Laden...</option>
+                        </select>
+                    </div>
+                    <div class="flex-1">
+                        <label for="hotelSelectie" class="block text-sm font-bold text-gray-700 mb-1">Kies een Onderdeel (Hotel/Bus)</label>
+                        <select id="hotelSelectie" class="block w-full rounded-md border-gray-300 border p-2.5 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 bg-gray-50">
+                            <option value="">-- Kies eerst een reis --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Filters & Export -->
+                <div class="flex flex-col sm:flex-row items-center gap-4">
+                    <label class="flex items-center gap-2 cursor-pointer bg-gray-50 px-4 py-2.5 rounded-md border border-gray-200 hover:bg-gray-100 transition-colors">
+                        <input type="checkbox" id="filterNietVolToggle" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
+                        <span class="text-sm font-medium text-gray-700">Verberg volle kamers</span>
+                    </label>
+
+                    <button id="btnExportExcel" class="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white text-sm font-bold rounded-md hover:bg-green-700 shadow-sm transition-colors">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Export Data
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kamers Raster (Hier tekent adminUI.js de blokjes) -->
+        <div class="mb-4 flex justify-between items-end">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800">Indeling & Overzicht</h2>
+                <p class="text-gray-500 text-sm">Sleep leerlingen van de ene naar de andere kamer om ze te verplaatsen.</p>
+            </div>
+        </div>
+
+        <!-- De Container -->
+        <div id="kamersContainerAdmin" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <!-- Voorbeeld van een lege staat -->
+            <div class="col-span-full text-center py-12 bg-white rounded-xl border border-dashed border-gray-300">
+                <i data-lucide="layout-grid" class="mx-auto h-12 w-12 text-gray-400 mb-3"></i>
+                <p class="text-gray-500">Selecteer hierboven een onderdeel om de kamers te beheren.</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Gevaarlijke Acties Zone (Helemaal onderaan) -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mb-8 border-t border-gray-200 mt-8">
+        <div class="bg-red-50 border border-red-200 rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+                <h3 class="text-lg font-bold text-red-800 flex items-center gap-2">
+                    <i data-lucide="alert-triangle" class="w-5 h-5"></i> Gevaarlijke Acties
+                </h3>
+                <p class="text-red-600 text-sm mt-1">Wis alle huidige inschrijvingen voor de geselecteerde reis. (Ideaal voor het begin van een nieuw schooljaar).</p>
+            </div>
+            <button id="btnResetReis" class="flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-sm font-bold rounded-md hover:bg-red-700 shadow-sm transition-colors whitespace-nowrap">
+                <i data-lucide="trash-2" class="w-4 h-4"></i> Reset Inschrijvingen
+            </button>
+        </div>
+    </section>
+
+    <!-- Scripts Inladen -->
+    <script>
+        // Start de iconen op
+        lucide.createIcons();
+    </script>
+    
+    <!-- Laad de Admin UI Logica in (als module zodat imports werken) -->
+    <script type="module" src="js/ui/adminUI.js"></script>
+
+</body>
+</html>

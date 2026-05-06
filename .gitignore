@@ -1,0 +1,38 @@
+============================================================================
+
+PEDLET - Git Ignore Configuratie
+
+============================================================================
+
+Bestanden en mappen in deze lijst worden NOOIT geüpload naar GitHub.
+
+1. Geheime configuratiebestanden (CRUCIAAL)
+
+.env
+.env.*
+*.pem
+*.key
+
+2. Log bestanden (Voorkomt dat server-errors online komen)
+
+.log
+npm-debug.log
+yarn-debug.log*
+yarn-error.log*
+error_log
+php_errors.log
+
+3. Systeem bestanden (Rommel van besturingssystemen)
+
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+4. Optioneel: Node modules (voor als je later Node.js tools toevoegt)
+
+node_modules/
+dist/
+build/
