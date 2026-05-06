@@ -22,7 +22,6 @@ let actieveReis = null;
 export async function initLoginUI() {
     const urlParams = new URLSearchParams(window.location.search);
     const schoolSlug = urlParams.get('school');
-    const reisSlug = urlParams.get('reis'); // NIEUW: Lees ook de reis uit de URL
     const authPayload = urlParams.get('auth_payload');
 
     // A. Als we terugkomen van Smartschool met data
@@ -39,7 +38,7 @@ export async function initLoginUI() {
     }
 
     // C. Laad de school en de actieve reis op de achtergrond
-    await laadSchoolEnReisData(schoolSlug, reisSlug);
+    await laadSchoolEnReisData(schoolSlug);
     
     // D. Koppel de acties aan beide formulieren
     setupEventListeners();
@@ -49,7 +48,7 @@ export async function initLoginUI() {
 // 2. DATA LADEN & UI UPDATEN
 // ============================================================================
 
-async function laadSchoolEnReisData(schoolSlug, reisSlug) {
+async function laadSchoolEnReisData(schoolSlug) {
     try {
         // 1. Zoek de school
         const { data: school, error: schoolErr } = await supabase
@@ -61,17 +60,15 @@ async function laadSchoolEnReisData(schoolSlug, reisSlug) {
         if (schoolErr || !school) throw new Error("School niet gevonden.");
         actieveSchool = school;
 
-        // 2. Zoek de specifieke reis voor deze school (via URL of de recentste zichtbare)
-        let reisQuery = supabase.from('reis').select('*').eq('school_id', school.id);
-        
-        if (reisSlug) {
-            reisQuery = reisQuery.eq('slug', reisSlug);
-        } else {
-            // Als er geen specifieke reis in de URL staat, pak de meest recente die zichtbaar is
-            reisQuery = reisQuery.eq('is_zichtbaar', true).order('datum_start', { ascending: false }).limit(1);
-        }
-
-        const { data: reis, error: reisErr } = await reisQuery.single(); 
+        // 2. Zoek automatisch de actieve/recente reis voor deze school
+        const { data: reis, error: reisErr } = await supabase
+            .from('reis')
+            .select('*')
+            .eq('school_id', school.id)
+            .eq('is_zichtbaar', true)
+            .order('datum_start', { ascending: false })
+            .limit(1)
+            .single(); 
 
         if (!reisErr && reis) {
             actieveReis = reis;
