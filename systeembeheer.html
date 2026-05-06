@@ -28,7 +28,7 @@
         ::-webkit-scrollbar-thumb:hover { background: #475569; }
     </style>
 </head>
-<body class="font-sans antialiased h-screen flex flex-col">
+<body class="font-sans antialiased h-screen flex flex-col relative">
 
     <!-- 1. INLOG SCHERM -->
     <div id="superadminLoginSectie" class="flex-grow flex items-center justify-center p-4">
@@ -135,7 +135,7 @@
                         <button onclick="voegNieuweKoepelToe()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
                             <i data-lucide="plus" class="w-4 h-4"></i> Koepel
                         </button>
-                        <button onclick="voegNieuweSchoolToe()" class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 hover:bg-emerald-500/30 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                        <button onclick="openSchoolModal()" class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 hover:bg-emerald-500/30 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
                             <i data-lucide="plus" class="w-4 h-4"></i> School
                         </button>
                     </div>
@@ -152,7 +152,7 @@
                 <div>
                     <div class="flex justify-between items-end mb-4">
                         <h3 class="text-xl font-bold text-white">Samenwerkende Scholen (Joint-Trips)</h3>
-                        <button onclick="voegSamenwerkingToe()" class="text-emerald-400 text-sm font-bold hover:underline flex items-center gap-1"><i data-lucide="plus" class="w-4 h-4"></i> Koppeling toevoegen</button>
+                        <button onclick="openSamenwerkingModal()" class="text-emerald-400 text-sm font-bold hover:underline flex items-center gap-1"><i data-lucide="plus" class="w-4 h-4"></i> Koppeling toevoegen</button>
                     </div>
                     <div class="grid gap-4" id="samenwerkingenLijst">
                         <div class="glass-panel rounded-xl border border-slate-700 p-6 text-center text-slate-500">Geen samenwerkingen geladen.</div>
@@ -188,13 +188,12 @@
                             </ul>
                         </div>
 
+                        <!-- Leerkracht Toevoegen Formulier (ZONDER email en tel) -->
                         <div class="glass-panel rounded-xl border border-slate-700 p-6">
                             <h3 class="font-bold text-white mb-4 flex items-center gap-2"><i data-lucide="user-plus" class="w-4 h-4 text-emerald-400"></i> Leerkracht Toevoegen</h3>
                             <form id="formLeerkracht" class="space-y-3 text-sm">
                                 <input type="text" id="lkNaam" placeholder="Familienaam" class="w-full bg-slate-800 border-slate-600 rounded p-2 text-white" required>
                                 <input type="text" id="lkVnaam" placeholder="Voornaam" class="w-full bg-slate-800 border-slate-600 rounded p-2 text-white" required>
-                                <input type="email" id="lkEmail" placeholder="E-mailadres" class="w-full bg-slate-800 border-slate-600 rounded p-2 text-white">
-                                <input type="text" id="lkTel" placeholder="Telefoonnummer" class="w-full bg-slate-800 border-slate-600 rounded p-2 text-white">
                                 <select id="lkDeelschool" class="w-full bg-slate-800 border-slate-600 rounded p-2 text-white">
                                     <option value="">Locatie/Deelschool (Optioneel)</option>
                                 </select>
@@ -214,7 +213,7 @@
                                 <thead class="bg-slate-900/50 sticky top-0">
                                     <tr>
                                         <th class="px-4 py-2 text-left text-xs font-medium text-slate-400 uppercase">Naam</th>
-                                        <th class="px-4 py-2 text-left text-xs font-medium text-slate-400 uppercase">Contact</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-slate-400 uppercase">Contact info</th>
                                         <th class="px-4 py-2 text-left text-xs font-medium text-slate-400 uppercase">Deelschool</th>
                                         <th class="px-4 py-2 text-right text-xs font-medium text-slate-400 uppercase">Acties</th>
                                     </tr>
@@ -260,13 +259,55 @@
         </main>
     </div>
 
+    <!-- MODALS (Pop-ups) -->
+    
+    <!-- Modal: School Toevoegen -->
+    <div id="schoolModal" class="fixed inset-0 bg-slate-900/80 flex items-center justify-center hidden z-50">
+        <div class="glass-panel p-6 rounded-xl w-full max-w-md text-slate-200">
+            <h3 class="text-xl font-bold mb-1 text-white">Nieuwe School & Admin</h3>
+            <p class="text-xs text-slate-400 mb-4">De contactgegevens worden gebruikt om de eerste beheerder voor deze school te maken.</p>
+            
+            <input id="newSchoolNaam" type="text" placeholder="Naam school (bijv. Sint-Ursula)" class="w-full bg-slate-800 border-slate-600 rounded p-2.5 mb-3 text-white focus:border-emerald-500 outline-none" required>
+            <input id="newSchoolSlug" type="text" placeholder="URL Slug (bijv. ursula)" class="w-full bg-slate-800 border-slate-600 rounded p-2.5 mb-3 text-white focus:border-emerald-500 outline-none" required>
+            <select id="newSchoolKoepel" class="w-full bg-slate-800 border-slate-600 rounded p-2.5 mb-3 text-white focus:border-emerald-500 outline-none">
+                <option value="">-- Geen koepel (Onafhankelijk) --</option>
+            </select>
+            
+            <div class="border-t border-slate-700 my-4 pt-4">
+                <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Contact Admin Profiel</label>
+                <input id="newSchoolEmail" type="email" placeholder="Algemeen E-mailadres" class="w-full bg-slate-800 border-slate-600 rounded p-2.5 mb-3 text-white focus:border-emerald-500 outline-none" required>
+                <input id="newSchoolTel" type="text" placeholder="Telefoonnummer (optioneel)" class="w-full bg-slate-800 border-slate-600 rounded p-2.5 mb-4 text-white focus:border-emerald-500 outline-none">
+            </div>
+
+            <div class="flex justify-end gap-3 mt-2">
+                <button onclick="sluitModal('schoolModal')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors">Annuleren</button>
+                <button onclick="saveNieuweSchool()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-bold rounded transition-colors flex items-center gap-2"><i data-lucide="save" class="w-4 h-4"></i> Aanmaken</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Samenwerking Toevoegen -->
+    <div id="samenwerkingModal" class="fixed inset-0 bg-slate-900/80 flex items-center justify-center hidden z-50">
+        <div class="glass-panel p-6 rounded-xl w-full max-w-md text-slate-200">
+            <h3 class="text-xl font-bold mb-4 text-white">Scholen Koppelen</h3>
+            <select id="samSchool1" class="w-full bg-slate-800 border-slate-600 rounded p-2.5 mb-3 text-white focus:border-emerald-500 outline-none"></select>
+            <select id="samSchool2" class="w-full bg-slate-800 border-slate-600 rounded p-2.5 mb-3 text-white focus:border-emerald-500 outline-none"></select>
+            <input id="samBeschrijving" type="text" placeholder="Korte beschrijving (bijv. Samenwerking Parijs)" class="w-full bg-slate-800 border-slate-600 rounded p-2.5 mb-5 text-white focus:border-emerald-500 outline-none">
+            
+            <div class="flex justify-end gap-3">
+                <button onclick="sluitModal('samenwerkingModal')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors">Annuleren</button>
+                <button onclick="saveSamenwerking()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-bold rounded transition-colors">Koppelen</button>
+            </div>
+        </div>
+    </div>
+
     <script>lucide.createIcons();</script>
     
     <script type="module">
         import { supabase } from './js/config/supabase.js';
 
         // ====================================================================
-        // APP NAVIGATIE LOGICA
+        // APP NAVIGATIE & MODAL LOGICA
         // ====================================================================
         let isSuperadmin = sessionStorage.getItem('pedlet_superadmin') === 'true';
 
@@ -288,10 +329,17 @@
             if(targetId === 'sectie-logs') laadLogs();
         };
 
+        window.sluitModal = function(id) {
+            document.getElementById(id).classList.add('hidden');
+        };
+
         if (isSuperadmin) {
             startDashboard();
         }
 
+        // ====================================================================
+        // INLOG & AUTHENTICATIE
+        // ====================================================================
         document.getElementById('superadminForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const password = document.getElementById('masterPassword').value;
@@ -335,7 +383,7 @@
         }
 
         // ====================================================================
-        // DATA OPHALEN & RENDEREN (Supabase integratie)
+        // DATA OPHALEN & RENDEREN
         // ====================================================================
 
         // 1. Agenda & Drukte (Gebruikt view_reis_agenda)
@@ -388,7 +436,7 @@
             } catch(e) { console.error("Fout laden agenda", e); }
         }
 
-        // 2. Infrastructuur (Koepels, Scholen, view_school_stats & Samenwerkingen)
+        // 2. Infrastructuur (Koepels, Scholen & Samenwerkingen)
         async function laadInfrastructuur() {
             try {
                 // Haal stats en deelscholen op
@@ -441,21 +489,23 @@
                 // Render Samenwerkingen
                 const samContainer = document.getElementById('samenwerkingenLijst');
                 samContainer.innerHTML = '';
-                if(samenwerkingen.length === 0) samContainer.innerHTML = '<div class="glass-panel rounded-xl border border-slate-700 p-6 text-center text-slate-500">Geen samenwerkingen geladen.</div>';
-                
-                samenwerkingen.forEach(s => {
-                    samContainer.innerHTML += `
-                        <div class="glass-panel rounded-xl border border-slate-700 p-6 flex items-center justify-between">
-                            <div class="flex items-center gap-4 text-slate-300">
-                                <span class="bg-slate-800 px-3 py-1 rounded border border-slate-600">${s.school1.naam}</span>
-                                <i data-lucide="arrow-left-right" class="w-5 h-5 text-emerald-400"></i>
-                                <span class="bg-slate-800 px-3 py-1 rounded border border-slate-600">${s.school2.naam}</span>
-                                ${s.beschrijving ? `<span class="text-sm text-slate-500 ml-4">(${s.beschrijving})</span>` : ''}
+                if(!samenwerkingen || samenwerkingen.length === 0) {
+                    samContainer.innerHTML = '<div class="glass-panel rounded-xl border border-slate-700 p-6 text-center text-slate-500">Geen samenwerkingen geladen.</div>';
+                } else {
+                    samenwerkingen.forEach(s => {
+                        samContainer.innerHTML += `
+                            <div class="glass-panel rounded-xl border border-slate-700 p-6 flex items-center justify-between">
+                                <div class="flex items-center gap-4 text-slate-300">
+                                    <span class="bg-slate-800 px-3 py-1 rounded border border-slate-600">${s.school1.naam}</span>
+                                    <i data-lucide="arrow-left-right" class="w-5 h-5 text-emerald-400"></i>
+                                    <span class="bg-slate-800 px-3 py-1 rounded border border-slate-600">${s.school2.naam}</span>
+                                    ${s.beschrijving ? `<span class="text-sm text-slate-500 ml-4">(${s.beschrijving})</span>` : ''}
+                                </div>
+                                <button onclick="verwijderSamenwerking(${s.id})" class="text-red-400 hover:text-red-300"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                             </div>
-                            <button onclick="verwijderSamenwerking(${s.id})" class="text-red-400 hover:text-red-300"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                        </div>
-                    `;
-                });
+                        `;
+                    });
+                }
                 lucide.createIcons();
             } catch(e) { console.error("Fout laden infrastructuur", e); }
         }
@@ -512,6 +562,11 @@
                 lks.forEach(lk => {
                     const letter = lk.naam.charAt(0).toUpperCase();
                     const locatie = lk.deelschool ? lk.deelschool.naam : '-';
+                    // We tonen email/tel als het aanwezig is (bv. de eerste beheerder)
+                    const contactHtml = (lk.email || lk.telefoonnummer) ? 
+                                        `<div>${lk.email || ''}</div><div class="text-slate-500 text-xs">${lk.telefoonnummer || ''}</div>` : 
+                                        '<span class="italic text-slate-500">Geen extra contactinfo</span>';
+
                     tbody.innerHTML += `
                         <tr class="hover:bg-slate-800/30">
                             <td class="px-4 py-3 whitespace-nowrap text-white font-medium flex items-center gap-2">
@@ -519,12 +574,11 @@
                                 ${lk.naam} ${lk.vnaam}
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap text-slate-300 text-sm">
-                                <div>${lk.email || '-'}</div>
-                                <div class="text-slate-500 text-xs">${lk.telefoonnummer || '-'}</div>
+                                ${contactHtml}
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap text-slate-400 text-sm">${locatie}</td>
                             <td class="px-4 py-3 whitespace-nowrap text-right">
-                                <button onclick="alert('Demo: Wachtwoord reset voor id ${lk.id}')" class="bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 px-2 py-1 rounded text-xs font-medium mr-1">Reset WW</button>
+                                <button onclick="alert('Wachtwoord reset flow voor de schoolbeheerder...')" class="bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 px-2 py-1 rounded text-xs font-medium mr-1">Reset WW</button>
                             </td>
                         </tr>
                     `;
@@ -532,7 +586,7 @@
             } catch(e) { console.error("Fout laden school details", e); }
         }
 
-        // Leerkracht toevoegen afhandelen
+        // Leerkracht toevoegen afhandelen (Zonder email/tel)
         document.getElementById('formLeerkracht').addEventListener('submit', async (e) => {
             e.preventDefault();
             const schoolId = document.getElementById('beheerSchoolSelect').value;
@@ -542,8 +596,6 @@
                 school_id: schoolId,
                 naam: document.getElementById('lkNaam').value,
                 vnaam: document.getElementById('lkVnaam').value,
-                email: document.getElementById('lkEmail').value || null,
-                telefoonnummer: document.getElementById('lkTel').value || null,
                 deelschool_id: document.getElementById('lkDeelschool').value || null,
                 rol: 'LEERKRACHT'
             };
@@ -560,7 +612,7 @@
         });
 
         // 4. Systeem Logs (systeem_log tabel)
-        async function laadLogs() {
+        window.laadLogs = async function() {
             try {
                 const tbody = document.getElementById('systeemLogsLijst');
                 tbody.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-slate-500"><i data-lucide="loader" class="mx-auto h-4 w-4 animate-spin"></i></td></tr>';
@@ -589,17 +641,123 @@
                 });
                 lucide.createIcons();
             } catch(e) { console.error("Fout bij laden logs", e); }
-        }
+        };
 
         // Helper om makkelijk vanuit code logs te schrijven
         async function voegLogToe(type, bericht, actor) {
             await supabase.from('systeem_log').insert([{ type, bericht, actor }]);
         }
 
-        // Dummy functies voor knoppen (Zodat UI niet breekt)
-        window.voegNieuweKoepelToe = () => alert("Open popup om Koepel toe te voegen in DB (Toekomstige update).");
-        window.voegNieuweSchoolToe = () => alert("Open popup om School toe te voegen in DB (Toekomstige update).");
-        window.voegSamenwerkingToe = () => alert("Open popup om Scholen te koppelen in DB (Toekomstige update).");
+        // ====================================================================
+        // ACTIES & CREATIES (Koepels, Scholen, Samenwerkingen toevoegen)
+        // ====================================================================
+
+        window.voegNieuweKoepelToe = async () => {
+            const naam = prompt("Geef de naam in van de nieuwe schoolkoepel:");
+            if (!naam || naam.trim() === '') return;
+            try {
+                const { error } = await supabase.from('koepel').insert([{ naam }]);
+                if (error) throw error;
+                await voegLogToe('BEHEER', `Koepel '${naam}' aangemaakt`, 'Superadmin');
+                laadInfrastructuur();
+            } catch (e) { alert("Fout bij aanmaken koepel: " + e.message); }
+        };
+
+        window.openSchoolModal = async () => {
+            const koepelSelect = document.getElementById('newSchoolKoepel');
+            koepelSelect.innerHTML = '<option value="">-- Geen koepel (Onafhankelijk) --</option>';
+            
+            // Haal beschikbare koepels op
+            const { data } = await supabase.from('koepel').select('id, naam').order('naam');
+            if(data) data.forEach(k => koepelSelect.innerHTML += `<option value="${k.id}">${k.naam}</option>`);
+            
+            document.getElementById('schoolModal').classList.remove('hidden');
+        };
+
+        window.saveNieuweSchool = async () => {
+            const naam = document.getElementById('newSchoolNaam').value;
+            const slug = document.getElementById('newSchoolSlug').value;
+            const koepel_id = document.getElementById('newSchoolKoepel').value || null;
+            
+            // Email en tel worden gebruikt voor eerste Admin
+            const email = document.getElementById('newSchoolEmail').value;
+            const tel = document.getElementById('newSchoolTel').value;
+
+            if(!naam || !slug || !email) return alert("Vul zeker de schoolnaam, slug en het admin e-mailadres in.");
+
+            try {
+                // 1. Maak de School aan
+                const { data: schoolData, error: schoolErr } = await supabase.from('school').insert([{
+                    naam, 
+                    slug, 
+                    koepel_id,
+                    teacher_password_hash: 'initial_setup' // Dummy hash voor de DB constraint
+                }]).select().single();
+                if(schoolErr) throw schoolErr;
+
+                // 2. Maak meteen de eerste Beheerder/Leerkracht aan met de contactgegevens
+                const { error: adminErr } = await supabase.from('persoon').insert([{
+                    school_id: schoolData.id,
+                    naam: 'Beheerder',
+                    vnaam: 'School',
+                    rol: 'LEERKRACHT',
+                    email: email,
+                    telefoonnummer: tel
+                }]);
+                if(adminErr) throw adminErr;
+
+                await voegLogToe('BEHEER', `School '${naam}' en admin-profiel toegevoegd.`, 'Superadmin');
+                
+                document.getElementById('newSchoolNaam').value = '';
+                document.getElementById('newSchoolSlug').value = '';
+                document.getElementById('newSchoolEmail').value = '';
+                document.getElementById('newSchoolTel').value = '';
+                
+                sluitModal('schoolModal');
+                laadInfrastructuur();
+            } catch(e) { alert("Fout bij opslaan school: " + e.message); }
+        };
+
+        window.openSamenwerkingModal = async () => {
+            const s1 = document.getElementById('samSchool1');
+            const s2 = document.getElementById('samSchool2');
+            s1.innerHTML = '<option value="">-- Kies eerste school --</option>';
+            s2.innerHTML = '<option value="">-- Kies tweede school --</option>';
+            
+            const { data } = await supabase.from('school').select('id, naam').order('naam');
+            if(data) data.forEach(s => {
+                s1.innerHTML += `<option value="${s.id}">${s.naam}</option>`;
+                s2.innerHTML += `<option value="${s.id}">${s.naam}</option>`;
+            });
+            
+            document.getElementById('samenwerkingModal').classList.remove('hidden');
+        };
+
+        window.saveSamenwerking = async () => {
+            const sch1 = parseInt(document.getElementById('samSchool1').value);
+            const sch2 = parseInt(document.getElementById('samSchool2').value);
+            const beschrijving = document.getElementById('samBeschrijving').value;
+
+            if(!sch1 || !sch2) return alert("Kies twee scholen.");
+            if(sch1 === sch2) return alert("Je kan een school niet met zichzelf koppelen.");
+
+            // DB constraint CHECK: school1_id moet kleiner zijn dan school2_id
+            const school1_id = Math.min(sch1, sch2);
+            const school2_id = Math.max(sch1, sch2);
+
+            try {
+                const { error } = await supabase.from('school_samenwerking').insert([{
+                    school1_id, school2_id, beschrijving
+                }]);
+                if(error) throw error;
+                
+                await voegLogToe('BEHEER', `Nieuwe samenwerking toegevoegd: ${beschrijving}`, 'Superadmin');
+                document.getElementById('samBeschrijving').value = '';
+                sluitModal('samenwerkingModal');
+                laadInfrastructuur();
+            } catch(e) { alert("Fout bij koppelen scholen: " + e.message); }
+        };
+
         window.verwijderSamenwerking = async (id) => {
             if(confirm('Zeker dat je deze samenwerking wil verbreken?')) {
                 await supabase.from('school_samenwerking').delete().eq('id', id);
