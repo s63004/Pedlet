@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Systeembeheer | Pedlet Platform</title>
     
-    <!-- Tailwind CSS -->
+    <!-- Tailwind CSS (Warning in console over productie is normaal en kan je negeren) -->
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Lucide Icons -->
@@ -383,32 +383,49 @@
         }
 
         // ====================================================================
-        // DATA OPHALEN & RENDEREN
+        // DATA OPHALEN & RENDEREN (ZONDER VIEWS, ALLES IN JAVASCRIPT GEGROEPEERD!)
         // ====================================================================
 
-        // 1. Agenda & Drukte (Gebruikt view_reis_agenda)
+        // 1. Agenda & Drukte
         async function laadAgenda() {
             try {
-                const { data, error } = await supabase.from('view_reis_agenda').select('*').order('openingsmoment', { ascending: true });
-                if (error) throw error;
-                
-                const agendaData = data || []; // Veiligheidscheck
-
                 const tbody = document.getElementById('agendaLijst');
+                tbody.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-slate-500"><i data-lucide="loader" class="mx-auto h-4 w-4 animate-spin"></i></td></tr>';
+                lucide.createIcons();
+
+                // Haal alle reizen op die gepland staan (via basis tabel, geen view)
+                const { data: reizen, error: reisErr } = await supabase.from('reis')
+                    .select('id, naam, datum_online, school_id, school(naam)')
+                    .not('datum_online', 'is', null)
+                    .order('datum_online', { ascending: true });
+
+                if (reisErr) throw reisErr;
+                
+                // Haal leerlingen op om verwachte drukte te berekenen
+                const { data: studenten } = await supabase.from('persoon').select('school_id').eq('rol', 'LEERLING');
+                let studentCount = {};
+                if (studenten) {
+                    studenten.forEach(s => studentCount[s.school_id] = (studentCount[s.school_id] || 0) + 1);
+                }
+
                 tbody.innerHTML = '';
                 let datumTellingen = {};
+                const agendaData = reizen || [];
 
                 agendaData.forEach(item => {
-                    const dt = new Date(item.openingsmoment);
-                    const datumSleutel = dt.toLocaleDateString('nl-BE'); // Groepeer per dag
+                    const dt = new Date(item.datum_online);
+                    const datumSleutel = dt.toLocaleDateString('nl-BE'); 
                     datumTellingen[datumSleutel] = (datumTellingen[datumSleutel] || 0) + 1;
+
+                    const schoolNaam = item.school ? item.school.naam : 'Onbekend';
+                    const verwachteLln = studentCount[item.school_id] || 0;
 
                     tbody.innerHTML += `
                         <tr class="hover:bg-slate-800/30">
                             <td class="px-6 py-4 whitespace-nowrap text-emerald-400 font-bold">${dt.toLocaleString('nl-BE', {dateStyle:'medium', timeStyle:'short'})}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-white">${item.school_naam}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-slate-300">${item.activiteit_naam}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-slate-400"><i data-lucide="users" class="w-4 h-4 inline mr-1"></i> ${item.verwachte_leerlingen || 0}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-white">${schoolNaam}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-slate-300">${item.naam}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-slate-400"><i data-lucide="users" class="w-4 h-4 inline mr-1"></i> ${verwachteLln}</td>
                         </tr>
                     `;
                 });
@@ -437,35 +454,54 @@
                 lucide.createIcons();
             } catch(e) { 
                 console.error("Fout laden agenda", e); 
-                document.getElementById('agendaLijst').innerHTML = `<tr><td colspan="4" class="p-6 text-center text-red-500">Fout bij laden. Check of de SQL Views zijn aangemaakt! (${e.message})</td></tr>`;
+                document.getElementById('agendaLijst').innerHTML = `<tr><td colspan="4" class="p-6 text-center text-red-500">Fout bij laden van agenda. (${e.message})</td></tr>`;
             }
         }
 
         // 2. Infrastructuur (Koepels, Scholen & Samenwerkingen)
         async function laadInfrastructuur() {
             try {
-                // We gebruiken losse variabelen en vangen fouten netjes op
-                const [ reqStats, reqDeel, reqSam ] = await Promise.all([
-                    supabase.from('view_school_stats').select('*').order('koepel_naam'),
+                const container = document.getElementById('scholenLijstContainer');
+                container.innerHTML = '<div class="text-center text-slate-500"><i data-lucide="loader" class="mx-auto h-6 w-6 animate-spin mb-2"></i> Data laden...</div>';
+                lucide.createIcons();
+
+                // Haal alles uit je basis tabellen (geen views meer!)
+                const [ reqScholen, reqPers, reqDeel, reqSam ] = await Promise.all([
+                    supabase.from('school').select('*, koepel(naam)'),
+                    supabase.from('persoon').select('id, school_id, rol, klas'),
                     supabase.from('deelschool').select('*'),
                     supabase.from('school_samenwerking').select('id, beschrijving, school1:school1_id(naam), school2:school2_id(naam)')
                 ]);
 
-                if (reqStats.error) throw reqStats.error;
+                if (reqScholen.error) throw reqScholen.error;
 
-                // Voorkom Null fouten als database leeg of niet geconfigureerd is
-                const stats = reqStats.data || [];
+                const scholen = reqScholen.data || [];
+                const personen = reqPers.data || [];
                 const deelscholen = reqDeel.data || [];
                 const samenwerkingen = reqSam.data || [];
 
-                const container = document.getElementById('scholenLijstContainer');
                 container.innerHTML = '';
                 
-                if (stats.length === 0) {
-                    container.innerHTML = '<div class="text-center text-slate-500">Geen scholen gevonden of de SQL-views zijn nog niet ingesteld in Supabase.</div>';
+                if (scholen.length === 0) {
+                    container.innerHTML = '<div class="text-center text-slate-500">Nog geen scholen gevonden in de database.</div>';
                 } else {
+                    // Bereken de statistieken direct hier in javascript (sneller & veiliger dan SQL views)
+                    const stats = scholen.map(s => {
+                        const schoolPersonen = personen.filter(p => p.school_id === s.id);
+                        const klassen = new Set(schoolPersonen.map(p => p.klas).filter(Boolean));
+                        
+                        return {
+                            school_id: s.id,
+                            school_naam: s.naam,
+                            koepel_naam: s.koepel ? s.koepel.naam : 'Onafhankelijk (Geen Koepel)',
+                            totaal_gebruikers: schoolPersonen.length,
+                            aantal_klassen: klassen.size
+                        };
+                    });
+
+                    // Groepeer op koepel
                     const gegroepeerd = stats.reduce((acc, school) => {
-                        const koepel = school.koepel_naam || 'Onafhankelijk (Geen Koepel)';
+                        const koepel = school.koepel_naam;
                         if(!acc[koepel]) acc[koepel] = [];
                         acc[koepel].push(school);
                         return acc;
@@ -508,7 +544,6 @@
                     samContainer.innerHTML = '<div class="glass-panel rounded-xl border border-slate-700 p-6 text-center text-slate-500">Geen samenwerkingen geladen.</div>';
                 } else {
                     samenwerkingen.forEach(s => {
-                        // Extra check voor als school1 of school2 ontbreekt in de view
                         const naam1 = s.school1 ? s.school1.naam : 'Onbekende school';
                         const naam2 = s.school2 ? s.school2.naam : 'Onbekende school';
 
@@ -528,11 +563,11 @@
                 lucide.createIcons();
             } catch(e) { 
                 console.error("Fout laden infrastructuur", e); 
-                document.getElementById('scholenLijstContainer').innerHTML = `<div class="text-center text-red-500">Fout bij ophalen. Check of de SQL Views zijn aangemaakt! (${e.message})</div>`;
+                document.getElementById('scholenLijstContainer').innerHTML = `<div class="text-center text-red-500">Fout bij ophalen. (${e.message})</div>`;
             }
         }
 
-        // 3. Gebruikers (Dropdown, view_school_stats & Leerkrachten tabel)
+        // 3. Gebruikers (Dropdown & Leerkrachten tabel)
         async function laadGebruikersDropdown() {
             const select = document.getElementById('beheerSchoolSelect');
             const { data, error } = await supabase.from('school').select('id, naam').order('naam');
@@ -548,21 +583,24 @@
             if(!schoolId) return;
 
             try {
-                // Update stats
-                const { data: stats, error: statsErr } = await supabase.from('view_school_stats').select('*').eq('school_id', schoolId).single();
-                if(stats) {
-                    document.getElementById('statTotaal').textContent = stats.totaal_gebruikers;
-                    document.getElementById('statLeerkrachten').textContent = stats.aantal_leerkrachten;
-                    document.getElementById('statLeerlingen').textContent = stats.aantal_leerlingen;
-                    document.getElementById('statKlassen').textContent = stats.aantal_klassen;
-                    document.getElementById('titelLeerkrachtenLijst').textContent = `Lijst Leerkrachten (${stats.school_naam})`;
-                } else if(statsErr) {
-                    console.error("View Stats Fout:", statsErr);
+                const schoolIdNum = parseInt(schoolId);
+                
+                // Haal alles apart op (Weer zonder views!)
+                const { data: school } = await supabase.from('school').select('*, koepel(naam)').eq('id', schoolIdNum).single();
+                const { data: personen } = await supabase.from('persoon').select('*, deelschool(naam)').eq('school_id', schoolIdNum);
+
+                if (school && personen) {
+                    const klassen = new Set(personen.map(p => p.klas).filter(Boolean));
+                    document.getElementById('statTotaal').textContent = personen.length;
+                    document.getElementById('statLeerkrachten').textContent = personen.filter(p => p.rol === 'LEERKRACHT').length;
+                    document.getElementById('statLeerlingen').textContent = personen.filter(p => p.rol === 'LEERLING').length;
+                    document.getElementById('statKlassen').textContent = klassen.size;
+                    document.getElementById('titelLeerkrachtenLijst').textContent = `Lijst Leerkrachten (${school.naam})`;
                 }
 
                 // Update deelschool dropdown in formulier
                 const selectDeelschool = document.getElementById('lkDeelschool');
-                const { data: ds } = await supabase.from('deelschool').select('id, naam').eq('school_id', schoolId);
+                const { data: ds } = await supabase.from('deelschool').select('id, naam').eq('school_id', schoolIdNum);
                 selectDeelschool.innerHTML = '<option value="">Locatie/Deelschool (Optioneel)</option>';
                 if(ds) ds.forEach(d => selectDeelschool.innerHTML += `<option value="${d.id}">${d.naam}</option>`);
 
@@ -571,20 +609,16 @@
                 tbody.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-slate-500"><i data-lucide="loader" class="mx-auto h-4 w-4 animate-spin"></i></td></tr>';
                 lucide.createIcons();
 
-                const { data: lks } = await supabase.from('persoon')
-                    .select('*, deelschool(naam)')
-                    .eq('school_id', schoolId)
-                    .eq('rol', 'LEERKRACHT')
-                    .order('naam');
+                const lks = personen ? personen.filter(p => p.rol === 'LEERKRACHT').sort((a,b) => a.naam.localeCompare(b.naam)) : [];
 
                 tbody.innerHTML = '';
-                if(!lks || lks.length === 0) {
+                if(lks.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-slate-500">Geen leerkrachten gevonden.</td></tr>';
                     return;
                 }
 
                 lks.forEach(lk => {
-                    const letter = lk.naam.charAt(0).toUpperCase();
+                    const letter = lk.naam ? lk.naam.charAt(0).toUpperCase() : '?';
                     const locatie = lk.deelschool ? lk.deelschool.naam : '-';
                     // We tonen email/tel als het aanwezig is (bv. de eerste beheerder)
                     const contactHtml = (lk.email || lk.telefoonnummer) ? 
@@ -610,17 +644,19 @@
             } catch(e) { console.error("Fout laden school details", e); }
         }
 
-        // Leerkracht toevoegen afhandelen (Zonder email/tel)
+        // Leerkracht toevoegen afhandelen (Zonder email/tel, puur op naam)
         document.getElementById('formLeerkracht').addEventListener('submit', async (e) => {
             e.preventDefault();
             const schoolId = document.getElementById('beheerSchoolSelect').value;
             if(!schoolId) return alert("Kies eerst een school bovenaan.");
 
+            const deelschoolValue = document.getElementById('lkDeelschool').value;
+
             const data = {
-                school_id: schoolId,
+                school_id: parseInt(schoolId),
                 naam: document.getElementById('lkNaam').value,
                 vnaam: document.getElementById('lkVnaam').value,
-                deelschool_id: document.getElementById('lkDeelschool').value || null,
+                deelschool_id: deelschoolValue ? parseInt(deelschoolValue) : null,
                 rol: 'LEERKRACHT'
             };
 
@@ -707,7 +743,9 @@
         window.saveNieuweSchool = async () => {
             const naam = document.getElementById('newSchoolNaam').value;
             const slug = document.getElementById('newSchoolSlug').value;
-            const koepel_id = document.getElementById('newSchoolKoepel').value || null;
+            
+            const koepelVal = document.getElementById('newSchoolKoepel').value;
+            const koepel_id = koepelVal ? parseInt(koepelVal) : null;
             
             // Email en tel worden gebruikt voor eerste Admin
             const email = document.getElementById('newSchoolEmail').value;
@@ -721,8 +759,9 @@
                     naam, 
                     slug, 
                     koepel_id,
-                    teacher_password_hash: 'initial_setup' // Dummy hash voor de DB constraint
+                    teacher_password_hash: 'initial_setup' // Verplicht in DB layout
                 }]).select().single();
+                
                 if(schoolErr) throw schoolErr;
 
                 // 2. Maak meteen de eerste Beheerder/Leerkracht aan met de contactgegevens
@@ -734,6 +773,7 @@
                     email: email,
                     telefoonnummer: tel
                 }]);
+                
                 if(adminErr) throw adminErr;
 
                 await voegLogToe('BEHEER', `School '${naam}' en admin-profiel toegevoegd.`, 'Superadmin');
