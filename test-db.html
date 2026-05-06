@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Connectie Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        #status { font-weight: bold; margin-bottom: 10px; font-size: 1.2em; }
+        .success { color: green; }
+        .error { color: red; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Database Connectie Test (Supabase)</h1>
+    <div id="status">Bezig met verbinden...</div>
+    <pre id="output">Wachten op antwoord van de database...</pre>
+
+    <!-- Zorg dat dit pad klopt met jouw bestandsstructuur -->
+    <script type="module">
+        // Importeer de Supabase client uit jouw eigen configuratie
+        import { supabase } from './js/config/supabase.js';
+
+        async function testDatabaseConnection() {
+            try {
+                // We testen de connectie door een simpele query te doen op de 'kamers' tabel
+                const { data, error } = await supabase
+                    .from('kamers')
+                    .select('*')
+                    .limit(1);
+
+                const statusEl = document.getElementById('status');
+                const outputEl = document.getElementById('output');
+
+                if (error) {
+                    statusEl.textContent = '❌ Fout bij verbinden met de database';
+                    statusEl.className = 'error';
+                    outputEl.textContent = JSON.stringify(error, null, 2);
+                } else {
+                    statusEl.textContent = '✅ Succesvol verbonden met de database!';
+                    statusEl.className = 'success';
+                    outputEl.textContent = 'Voorbeeld data (1 record):\n' + JSON.stringify(data, null, 2);
+                }
+            } catch (err) {
+                document.getElementById('status').textContent = '❌ Er is een kritieke fout opgetreden';
+                document.getElementById('status').className = 'error';
+                document.getElementById('output').textContent = err.message;
+            }
+        }
+
+        testDatabaseConnection();
+    </script>
+</body>
+</html>
