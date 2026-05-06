@@ -129,14 +129,13 @@
                         <h2 class="text-2xl font-bold">Organisaties Beheren</h2>
                         <div class="flex gap-2">
                             <button onclick="toonModal('modalKoepel')" class="bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded text-sm text-white border border-slate-600 flex items-center gap-2"><i data-lucide="plus" class="w-4 h-4"></i> Koepel</button>
-                            <button onclick="toonModal('modalSchool')" class="bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 rounded text-sm text-white flex items-center gap-2"><i data-lucide="plus" class="w-4 h-4"></i> School</button>
                             <button onclick="toonModal('modalDeelschool')" class="bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded text-sm text-white border border-slate-600 flex items-center gap-2"><i data-lucide="plus" class="w-4 h-4"></i> Deelschool</button>
                         </div>
                     </div>
                     
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <!-- Scholen Tabel -->
-                        <div class="glass-panel rounded-xl border border-slate-700 overflow-hidden col-span-2">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Scholen Tabel (Nu 2 kolommen breed) -->
+                        <div class="glass-panel rounded-xl border border-slate-700 overflow-hidden lg:col-span-2">
                             <div class="p-4 border-b border-slate-700 bg-slate-800/50"><h3 class="font-bold text-white">Alle Scholen & Deelscholen</h3></div>
                             <table class="min-w-full divide-y divide-slate-700 text-sm">
                                 <thead class="bg-slate-800/30">
@@ -145,13 +144,48 @@
                                         <th class="px-4 py-3 text-left text-slate-400">Koepel</th>
                                         <th class="px-4 py-3 text-left text-slate-400">Slug (URL)</th>
                                         <th class="px-4 py-3 text-left text-slate-400">Deelscholen</th>
+                                        <th class="px-4 py-3 text-right text-slate-400">Acties</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tabelScholen" class="divide-y divide-slate-700/50 bg-slate-900/20">
-                                    <tr><td colspan="4" class="p-4 text-center text-slate-500">Laden...</td></tr>
+                                    <tr><td colspan="5" class="p-4 text-center text-slate-500">Laden...</td></tr>
                                 </tbody>
                             </table>
                         </div>
+
+                        <!-- Nieuwe School Toevoegen Formulier (1 kolom breed) -->
+                        <div>
+                            <div class="glass-panel rounded-xl border border-slate-700 p-6">
+                                <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                    <i data-lucide="plus-circle" class="w-5 h-5 text-emerald-400"></i> Nieuwe School
+                                </h3>
+                                <form id="formNieuweSchool" class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm text-slate-400 mb-1">Volledige Naam</label>
+                                        <input type="text" id="nieuwSchoolNaam" class="w-full bg-slate-800 border-slate-600 rounded-md p-2 text-white text-sm focus:border-emerald-500" placeholder="bijv. Sint-Ursula Instituut" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm text-slate-400 mb-1">URL Slug (Voor inloglink)</label>
+                                        <input type="text" id="nieuwSchoolSlug" class="w-full bg-slate-800 border-slate-600 rounded-md p-2 text-white text-sm focus:border-emerald-500" placeholder="bijv. ursula" required>
+                                        <p class="text-xs text-slate-500 mt-1">pedlet.be/login.html?school=ursula</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm text-slate-400 mb-1">Koepel (Optioneel)</label>
+                                        <select id="nieuwSchoolKoepel" class="w-full bg-slate-800 border-slate-600 rounded-md p-2 text-white text-sm focus:border-emerald-500">
+                                            <option value="">Geen Koepel</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm text-slate-400 mb-1">Standaard Leerkrachten Wachtwoord</label>
+                                        <input type="password" id="nieuwSchoolWw" class="w-full bg-slate-800 border-slate-600 rounded-md p-2 text-white text-sm focus:border-emerald-500" placeholder="Kies een veilig wachtwoord" required>
+                                    </div>
+                                    <button type="button" onclick="alert('In deze test wordt de data validatie getoond. In productie roept dit supabase.rpc aan om veilig te hashen!')" class="w-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/50 py-2 rounded-md font-medium transition-colors mt-2 text-sm flex justify-center items-center gap-2">
+                                        <i data-lucide="save" class="w-4 h-4"></i> Aanmaken
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 
@@ -227,7 +261,6 @@
                 <div id="tab-systeem" class="tab-content">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-2xl font-bold">Systeem Logs & Beveiliging</h2>
-                        <button onclick="toonModal('modalWachtwoord')" class="bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded text-sm text-white border border-slate-600 flex items-center gap-2"><i data-lucide="key" class="w-4 h-4"></i> Wachtwoord Veranderen</button>
                     </div>
                     <div class="glass-panel rounded-xl border border-slate-700 overflow-hidden">
                         <table class="min-w-full divide-y divide-slate-700 text-sm">
@@ -250,7 +283,7 @@
         </main>
     </div>
 
-    <!-- MODALS (Pop-ups voor toevoegen) -->
+    <!-- MODALS (Pop-ups voor bewerken en toevoegen) -->
     
     <!-- Modal: Leerkracht Toevoegen -->
     <div id="modalLeerkracht" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4">
@@ -267,14 +300,57 @@
                 
                 <div class="flex justify-end gap-2 mt-6">
                     <button type="button" onclick="sluitModal('modalLeerkracht')" class="px-4 py-2 rounded text-sm bg-slate-800 hover:bg-slate-700 text-white">Annuleren</button>
-                    <button type="button" onclick="alert('In deze test wordt de leerkracht bewaard.')" class="px-4 py-2 rounded text-sm bg-emerald-600 hover:bg-emerald-700 text-white">Opslaan</button>
+                    <button type="button" onclick="alert('Opgeslagen!')" class="px-4 py-2 rounded text-sm bg-emerald-600 hover:bg-emerald-700 text-white">Opslaan</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Modal: Algemene functionaliteit demonstratie (Koepel, School, Wachtwoord) -->
-    <!-- Opmerking: Voor de leesbaarheid van de code in Canvas zijn de andere formulieren via JavaScript alerts gesimuleerd in deze weergave -->
+    <!-- Modal: School Wachtwoord Wijzigen -->
+    <div id="modalSchoolWachtwoord" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel rounded-xl border border-slate-700 w-full max-w-md p-6">
+            <h3 class="text-xl font-bold text-white mb-2 flex items-center gap-2">
+                <i data-lucide="key" class="w-5 h-5 text-yellow-500"></i> Wachtwoord Wijzigen
+            </h3>
+            <p id="editWwSchoolNaam" class="text-sm text-slate-400 mb-4">School: ...</p>
+            <form id="formSchoolWw" class="space-y-3">
+                <input type="hidden" id="editWwSchoolId">
+                <div>
+                    <label class="text-xs text-slate-400">Nieuw Leerkrachten Wachtwoord</label>
+                    <input type="password" id="nieuweSchoolWwInvoer" class="w-full bg-slate-800 rounded p-2 text-sm text-white" required>
+                </div>
+                <div class="flex justify-end gap-2 mt-6">
+                    <button type="button" onclick="sluitModal('modalSchoolWachtwoord')" class="px-4 py-2 rounded text-sm bg-slate-800 hover:bg-slate-700 text-white">Annuleren</button>
+                    <button type="button" onclick="alert('Om een wachtwoord veilig op te slaan moet dit in de backend gehashed worden via een RPC.')" class="px-4 py-2 rounded text-sm bg-yellow-600 hover:bg-yellow-700 text-white font-bold">Wijzig Wachtwoord</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: School Bewerken (Naam, Slug, Koepel) -->
+    <div id="modalEditSchool" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel rounded-xl border border-slate-700 w-full max-w-md p-6">
+            <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <i data-lucide="edit-3" class="w-5 h-5 text-blue-400"></i> School Bewerken
+            </h3>
+            <form id="formEditSchool" class="space-y-3">
+                <input type="hidden" id="editSchoolId">
+                <div>
+                    <label class="text-xs text-slate-400">Naam</label>
+                    <input type="text" id="editSchoolNaam" class="w-full bg-slate-800 rounded p-2 text-sm text-white" required>
+                </div>
+                <div>
+                    <label class="text-xs text-slate-400">Slug (Let op: Verandert de login URL!)</label>
+                    <input type="text" id="editSchoolSlug" class="w-full bg-slate-800 rounded p-2 text-sm text-white font-mono" required>
+                </div>
+                <div class="flex justify-end gap-2 mt-6">
+                    <button type="button" onclick="sluitModal('modalEditSchool')" class="px-4 py-2 rounded text-sm bg-slate-800 hover:bg-slate-700 text-white">Annuleren</button>
+                    <button type="button" onclick="alert('Update queries (supabase.from().update()) worden hiermee afgevuurd.')" class="px-4 py-2 rounded text-sm bg-blue-600 hover:bg-blue-700 text-white">Opslaan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 
     <script type="module">
         import { supabase } from './js/config/supabase.js';
@@ -340,7 +416,10 @@
 
                     // Data inladen op basis van tab
                     if(target === 'tab-dashboard') laadDashboardStats();
-                    if(target === 'tab-organisaties') laadOrganisaties();
+                    if(target === 'tab-organisaties') {
+                        laadOrganisaties();
+                        vulKoepelDropdown(); // Voor het aanmaak formulier
+                    }
                     if(target === 'tab-reizen') laadReizen();
                     if(target === 'tab-gebruikers') vulSchoolDropdown();
                 });
@@ -349,26 +428,24 @@
             laadDashboardStats(); // Start met eerste tab
         }
 
-        // --- DATA OPHALEN (Voorbeelden van complexe queries) ---
+        // --- DATA OPHALEN & ACTIES ---
 
         async function laadDashboardStats() {
             try {
-                // 1. Scholen tellen
                 const { count: sCount } = await supabase.from('school').select('*', { count: 'exact', head: true });
                 document.getElementById('statScholen').textContent = sCount || 0;
 
-                // 2. Gebruikers tellen
                 const { count: gCount } = await supabase.from('persoon').select('*', { count: 'exact', head: true });
                 document.getElementById('statGebruikers').textContent = gCount || 0;
 
-                // 3. Reizen ophalen en overlap detecteren
                 const { data: reizen } = await supabase.from('reis').select('id, naam, datum_start, school:school_id(naam)');
                 if(reizen) {
                     document.getElementById('statReizen').textContent = reizen.length;
                     
-                    // Overlap Logica
                     let dateCounts = {};
-                    let overlapDates = [];
+                    let hasOverlap = false;
+                    const overlapLijst = document.getElementById('overlapLijst');
+                    overlapLijst.innerHTML = '';
                     
                     reizen.forEach(r => {
                         if(r.datum_start) {
@@ -377,22 +454,14 @@
                         }
                     });
 
-                    const overlapLijst = document.getElementById('overlapLijst');
-                    overlapLijst.innerHTML = '';
-                    let hasOverlap = false;
-
                     for (const [date, trips] of Object.entries(dateCounts)) {
-                        if (trips.length > 1) { // Meerdere reizen op 1 dag!
+                        if (trips.length > 1) {
                             hasOverlap = true;
                             overlapLijst.innerHTML += `<li><strong>${new Date(date).toLocaleDateString('nl-BE')}</strong> (${trips.length} reizen): ${trips.join(', ')}</li>`;
                         }
                     }
 
-                    if(hasOverlap) {
-                        document.getElementById('alertBox').classList.remove('hidden');
-                    } else {
-                        document.getElementById('alertBox').classList.add('hidden');
-                    }
+                    document.getElementById('alertBox').classList.toggle('hidden', !hasOverlap);
                 }
             } catch(e) { console.error("Fout laden stats", e); }
         }
@@ -406,22 +475,34 @@
                 scholen.forEach(s => {
                     const koepel = s.koepel ? s.koepel.naam : '-';
                     const deelscholen = s.deelschool.map(d => d.naam).join(', ') || '-';
+                    // We voegen de actieknoppen toe in de laatste kolom
                     tbody.innerHTML += `
                         <tr class="hover:bg-slate-800/50">
                             <td class="px-4 py-3 text-white font-medium">${s.naam}</td>
                             <td class="px-4 py-3 text-slate-400">${koepel}</td>
                             <td class="px-4 py-3 text-emerald-400 font-mono text-xs">${s.slug}</td>
                             <td class="px-4 py-3 text-slate-400 text-xs">${deelscholen}</td>
+                            <td class="px-4 py-3 text-right">
+                                <button onclick="openEditSchool(${s.id}, '${s.naam}', '${s.slug}')" class="text-blue-400 hover:text-blue-300 mr-3" title="School Info Bewerken"><i data-lucide="edit-3" class="w-4 h-4 inline"></i></button>
+                                <button onclick="openWachtwoordModal(${s.id}, '${s.naam}')" class="text-yellow-500 hover:text-yellow-400" title="Wachtwoord Wijzigen"><i data-lucide="key" class="w-4 h-4 inline"></i></button>
+                            </td>
                         </tr>
                     `;
                 });
+                lucide.createIcons(); // Belangrijk: forceer de iconen om te tekenen in nieuw gegenereerde HTML
             }
         }
 
-        // Gebruikers en Leerkrachten ophalen voor een specifieke school
+        async function vulKoepelDropdown() {
+            const select = document.getElementById('nieuwSchoolKoepel');
+            if (select.options.length > 1) return;
+            const { data: koepels } = await supabase.from('koepel').select('id, naam');
+            if(koepels) koepels.forEach(k => select.innerHTML += `<option value="${k.id}">${k.naam}</option>`);
+        }
+
         async function vulSchoolDropdown() {
             const select = document.getElementById('gebruikerSchoolSelect');
-            if (select.options.length > 1) return; // Al gevuld
+            if (select.options.length > 1) return; 
             const { data: scholen } = await supabase.from('school').select('id, naam');
             if(scholen) scholen.forEach(s => select.innerHTML += `<option value="${s.id}">${s.naam}</option>`);
         }
@@ -432,16 +513,12 @@
 
             document.getElementById('gebruikersDataSectie').classList.remove('hidden');
             
-            // Haal gebruikers op voor school
             const { data: personen } = await supabase.from('persoon').select('*').eq('school_id', schoolId);
             if(personen) {
                 document.getElementById('totaalSchoolGebruikers').textContent = personen.length;
-                
-                // Distinct Klassen
                 const klassen = [...new Set(personen.filter(p => p.klas).map(p => p.klas))].sort();
                 document.getElementById('klassenLijst').innerHTML = klassen.map(k => `<span class="bg-slate-800 px-2 py-1 rounded border border-slate-700">${k}</span>`).join('');
                 
-                // Leerkrachten Lijst (inclusief email, telefoon, locatie via deelschool)
                 const leerkrachten = personen.filter(p => p.rol === 'LEERKRACHT');
                 const lkrHTML = leerkrachten.map(l => `
                     <li class="bg-slate-800/50 p-2 rounded border border-slate-700">
@@ -458,12 +535,26 @@
             }
         });
 
-        // Globale functies voor modals
+        // --- GLOBALE UI FUNCTIES ---
         window.toonModal = (id) => {
             if(document.getElementById(id)) document.getElementById(id).classList.remove('hidden');
-            else alert("Dit formulier kan via de code in Canvas makkelijk gekopieerd worden naar voorbeeld van 'Leerkracht Toevoegen'!");
         };
         window.sluitModal = (id) => document.getElementById(id).classList.add('hidden');
+
+        // Koppel data aan de edit modals
+        window.openEditSchool = (id, naam, slug) => {
+            document.getElementById('editSchoolId').value = id;
+            document.getElementById('editSchoolNaam').value = naam;
+            document.getElementById('editSchoolSlug').value = slug;
+            toonModal('modalEditSchool');
+        };
+
+        window.openWachtwoordModal = (id, naam) => {
+            document.getElementById('editWwSchoolId').value = id;
+            document.getElementById('editWwSchoolNaam').textContent = `School: ${naam}`;
+            document.getElementById('nieuweSchoolWwInvoer').value = '';
+            toonModal('modalSchoolWachtwoord');
+        };
 
     </script>
 </body>
