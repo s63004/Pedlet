@@ -61,8 +61,6 @@ async function laadSchoolEnReisData(schoolSlug) {
         actieveSchool = school;
 
         // 2. Zoek automatisch de actieve/recente reis voor deze school
-        // OPLOSSING: We gebruiken maybeSingle() in plaats van single() om 406 fouten te voorkomen 
-        // als er (nog) geen zichtbare reis bestaat voor deze school.
         const { data: reis, error: reisErr } = await supabase
             .from('reis')
             .select('*')
@@ -74,7 +72,6 @@ async function laadSchoolEnReisData(schoolSlug) {
 
         if (!reisErr && reis) {
             actieveReis = reis;
-            // Sla het reis ID op voor later gebruik (bijv. na Smartschool redirect)
             sessionStorage.setItem('pedlet_actieve_reis_id', reis.id);
         }
 
@@ -87,7 +84,6 @@ async function laadSchoolEnReisData(schoolSlug) {
 }
 
 function updateSchermVisuals() {
-    // 1. Pas titels aan (het linker animerende paneel)
     const titelEl = document.getElementById('loginTitel');
     const subtitelEl = document.getElementById('loginSubtitel');
     
@@ -101,13 +97,11 @@ function updateSchermVisuals() {
         subtitelEl.textContent = ontsnapHTML(actieveSchool.naam);
     }
 
-    // 2. Achtergrond aanpassen op het dynamic-bg element
     if (actieveReis && actieveReis.login_bg) {
         const bgEl = document.getElementById('dynamic-bg');
         if (bgEl) bgEl.style.backgroundImage = `url('${actieveReis.login_bg}')`;
     }
 
-    // 3. Time-Gate Controle voor leerlingen (Mag men er al op?)
     if (actieveReis && actieveReis.datum_online) {
         const nu = new Date();
         const onlineDatum = new Date(actieveReis.datum_online);
@@ -131,7 +125,7 @@ function toonTijdslotWaarschuwing(onlineDatum) {
                 <div class="ml-3">
                     <p class="text-sm text-orange-700 font-bold">Inschrijvingen nog gesloten</p>
                     <p class="text-sm text-orange-600 mt-1">
-                        Toegang vanaf <strong>${formatteerDatumTijd(actieveReis.datum_online)}</strong>.
+                        Toegang vanaf <strong>${formatteerDatumTijd(onlineDatum)}</strong>.
                     </p>
                 </div>
             </div>
@@ -158,36 +152,36 @@ function setupEventListeners() {
     // --- B. LEERLINGEN MANUEEL FORMULIER ---
     const formManueel = document.getElementById('manueelLoginForm');
     if (formManueel) {
+        // FIX: Schakel HTML5 validatie uit zodat de browser de submit niet stilzwijgend blokkeert
+        formManueel.setAttribute('novalidate', 'true');
+        
         formManueel.addEventListener('submit', async (e) => {
             e.preventDefault();
             const vnaam = document.getElementById('inputVnaam').value.trim();
             const naam = document.getElementById('inputNaam').value.trim();
             const klas = document.getElementById('inputKlas').value.trim();
 
-            if (!vnaam || !naam || !klas) return toonMelding("Vul alle velden in.", "error");
+            if (!vnaam || !naam || !klas) return toonMelding("Vul aub alle velden in.", "error");
 
             try {
                 const btn = formManueel.querySelector('button[type="submit"]');
                 btn.innerHTML = "Bezig met inloggen...";
                 btn.disabled = true;
 
-                // Call de API
                 const gebruiker = await loginManueel(actieveSchool.id, vnaam, naam, klas);
                 
-                // Controleer rechten (Time-gate)
                 if (actieveReis) {
                     const toegestaan = checkReisToegang(actieveReis, gebruiker);
                     if (!toegestaan.toegang) throw new Error(toegestaan.reden);
                 }
 
-                // Succes -> Ga naar verdeling
                 toonMelding(`Welkom ${ontsnapHTML(gebruiker.vnaam)}!`, "success");
                 
-                // Trigger de exit animatie van login.html
                 document.getElementById('auth-container').classList.add('exit-slide');
                 setTimeout(() => window.location.href = 'verdeling.html', 550);
 
             } catch (error) {
+                console.error("Fout bij leerling login:", error);
                 toonMelding(error.message, "error");
                 const btn = formManueel.querySelector('button[type="submit"]');
                 btn.innerHTML = "Doorgaan als Leerling";
@@ -199,29 +193,40 @@ function setupEventListeners() {
     // --- C. LEERKRACHTEN FORMULIER ---
     const formLeerkracht = document.getElementById('teacherLoginForm');
     if (formLeerkracht) {
+        // FIX: Schakel HTML5 validatie uit zodat de browser de submit niet stilzwijgend blokkeert
+        formLeerkracht.setAttribute('novalidate', 'true');
+        
         formLeerkracht.addEventListener('submit', async (e) => {
             e.preventDefault();
             const vnaam = document.getElementById('inputLkrVnaam').value.trim();
             const naam = document.getElementById('inputLkrNaam').value.trim();
             const wachtwoord = document.getElementById('inputLkrWachtwoord').value;
 
-            if (!vnaam || !naam || !wachtwoord) return toonMelding("Vul alle velden in.", "error");
+            // 1. Zelf controleren of alles is ingevuld en duidelijk communiceren
+            if (!vnaam || !naam || !wachtwoord) {
+                return toonMelding("Vul aub je naam, voornaam en het schoolwachtwoord in.", "error");
+            }
 
             try {
                 const btn = formLeerkracht.querySelector('button[type="submit"]');
                 btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Bezig...';
                 btn.disabled = true;
 
-                // 1. Controleer het wachtwoord veilig via de database RPC
+                // 2. Wachtwoord check via database RPC
                 const { data: isGeldig, error } = await supabase.rpc('verify_teacher_password', {
                     p_password: wachtwoord,
                     p_school_id: actieveSchool.id
                 });
 
-                if (error || !isGeldig) throw new Error("Ongeldig schoolwachtwoord.");
+                if (error) {
+                    console.error("Database connectie fout bij wachtwoord check:", error);
+                    throw new Error("Kan niet verbinden met de inlogserver.");
+                }
 
-                // 2. Zoek of we deze leerkracht al in de database hebben staan (of maak aan)
-                let { data: lkrData } = await supabase.from('persoon')
+                if (!isGeldig) throw new Error("Ongeldig schoolwachtwoord.");
+
+                // 3. Leerkracht in de database opzoeken of aanmaken
+                let { data: lkrData, error: zoekErr } = await supabase.from('persoon')
                     .select('*')
                     .eq('school_id', actieveSchool.id)
                     .ilike('vnaam', vnaam)
@@ -229,24 +234,25 @@ function setupEventListeners() {
                     .eq('rol', 'LEERKRACHT')
                     .maybeSingle();
 
+                if (zoekErr) throw new Error("Fout bij ophalen profiel.");
+
                 if (!lkrData) {
-                    // Maak een nieuw record aan in de database voor deze leerkracht
                     const { data: nieuwLkr, error: insertErr } = await supabase.from('persoon')
                         .insert([{ school_id: actieveSchool.id, vnaam, naam, rol: 'LEERKRACHT' }])
                         .select().single();
-                    if (insertErr) throw new Error("Kon profiel niet registreren.");
+                    if (insertErr) throw new Error("Kon je profiel niet voor de eerste keer registreren.");
                     lkrData = nieuwLkr;
                 }
 
-                // 3. Sla lokaal op en redirect
+                // 4. Succes!
                 sessionStorage.setItem('pedlet_user', JSON.stringify(lkrData));
                 toonMelding(`Welkom beheerder ${ontsnapHTML(lkrData.vnaam)}!`, "success");
                 
-                // Animatie
                 document.getElementById('auth-container').classList.add('exit-slide');
                 setTimeout(() => window.location.href = 'admin.html', 550);
 
             } catch (error) {
+                console.error("Fout bij beheerder login:", error);
                 toonMelding(error.message, "error");
                 const btn = formLeerkracht.querySelector('button[type="submit"]');
                 btn.innerHTML = "Inloggen als Beheerder";
@@ -263,17 +269,14 @@ async function verwerkTerugkeerVanSmartschool(payload) {
     try {
         toonMelding("Smartschool data verwerken...", "info");
         
-        // 1. Verwerk de data in de database
         const gebruiker = await verwerkSmartschoolLogin(payload);
         
-        // 2. Rol-gebaseerde redirect (Leerkracht = admin, Leerling = verdeling)
         if (gebruiker.rol === 'LEERKRACHT') {
             toonMelding(`Welkom beheerder ${ontsnapHTML(gebruiker.vnaam)}!`, "success");
             setTimeout(() => window.location.href = 'admin.html', 1000);
             return;
         }
 
-        // 3. Voor leerlingen: Check time-gates op de laatst bezochte reis
         const opgeslagenReisId = sessionStorage.getItem('pedlet_actieve_reis_id');
         let reisQuery = supabase.from('reis').select('*').eq('school_id', gebruiker.school_id);
         
@@ -283,7 +286,6 @@ async function verwerkTerugkeerVanSmartschool(payload) {
             reisQuery = reisQuery.eq('is_zichtbaar', true).order('datum_start', { ascending: false }).limit(1);
         }
 
-        // Ook hier maybeSingle() gebruiken om de 406 fout te voorkomen
         const { data: reis } = await reisQuery.maybeSingle();
 
         if (reis) {
