@@ -12,7 +12,7 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
 // 1. Jouw Project URL (Begint meestal met https:// en eindigt op .supabase.co)
-const SUPABASE_URL = 'https://tzokmegduddzhwwmpkyw.supabase.co/rest/v1/'; 
+const SUPABASE_URL = 'https://tzokmegduddzhwwmpkyw.supabase.co'; 
 
 // 2. Jouw Anon/Public Key (Een hele lange reeks letters en cijfers)
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR6b2ttZWdkdWRkemh3d21wa3l3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjMzNDUsImV4cCI6MjA5MzYzOTM0NX0.kBHOmd7hxNF6f-nN_21pQ1bwSRIVDnNkRDaj-uyIbeQ';
