@@ -391,12 +391,14 @@
             try {
                 const { data, error } = await supabase.from('view_reis_agenda').select('*').order('openingsmoment', { ascending: true });
                 if (error) throw error;
+                
+                const agendaData = data || []; // Veiligheidscheck
 
                 const tbody = document.getElementById('agendaLijst');
                 tbody.innerHTML = '';
                 let datumTellingen = {};
 
-                data.forEach(item => {
+                agendaData.forEach(item => {
                     const dt = new Date(item.openingsmoment);
                     const datumSleutel = dt.toLocaleDateString('nl-BE'); // Groepeer per dag
                     datumTellingen[datumSleutel] = (datumTellingen[datumSleutel] || 0) + 1;
@@ -411,7 +413,7 @@
                     `;
                 });
 
-                if(data.length === 0) {
+                if(agendaData.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-slate-500">Geen geplande activiteiten gevonden.</td></tr>';
                 }
 
@@ -433,72 +435,89 @@
                     overloadDiv.classList.remove('flex');
                 }
                 lucide.createIcons();
-            } catch(e) { console.error("Fout laden agenda", e); }
+            } catch(e) { 
+                console.error("Fout laden agenda", e); 
+                document.getElementById('agendaLijst').innerHTML = `<tr><td colspan="4" class="p-6 text-center text-red-500">Fout bij laden. Check of de SQL Views zijn aangemaakt! (${e.message})</td></tr>`;
+            }
         }
 
         // 2. Infrastructuur (Koepels, Scholen & Samenwerkingen)
         async function laadInfrastructuur() {
             try {
-                // Haal stats en deelscholen op
-                const [ {data: stats}, {data: deelscholen}, {data: samenwerkingen} ] = await Promise.all([
+                // We gebruiken losse variabelen en vangen fouten netjes op
+                const [ reqStats, reqDeel, reqSam ] = await Promise.all([
                     supabase.from('view_school_stats').select('*').order('koepel_naam'),
                     supabase.from('deelschool').select('*'),
                     supabase.from('school_samenwerking').select('id, beschrijving, school1:school1_id(naam), school2:school2_id(naam)')
                 ]);
 
-                // Render Scholen (Groepeer in javascript op koepel_naam)
+                if (reqStats.error) throw reqStats.error;
+
+                // Voorkom Null fouten als database leeg of niet geconfigureerd is
+                const stats = reqStats.data || [];
+                const deelscholen = reqDeel.data || [];
+                const samenwerkingen = reqSam.data || [];
+
                 const container = document.getElementById('scholenLijstContainer');
                 container.innerHTML = '';
                 
-                const gegroepeerd = stats.reduce((acc, school) => {
-                    const koepel = school.koepel_naam || 'Onafhankelijk (Geen Koepel)';
-                    if(!acc[koepel]) acc[koepel] = [];
-                    acc[koepel].push(school);
-                    return acc;
-                }, {});
+                if (stats.length === 0) {
+                    container.innerHTML = '<div class="text-center text-slate-500">Geen scholen gevonden of de SQL-views zijn nog niet ingesteld in Supabase.</div>';
+                } else {
+                    const gegroepeerd = stats.reduce((acc, school) => {
+                        const koepel = school.koepel_naam || 'Onafhankelijk (Geen Koepel)';
+                        if(!acc[koepel]) acc[koepel] = [];
+                        acc[koepel].push(school);
+                        return acc;
+                    }, {});
 
-                for(let koepel in gegroepeerd) {
-                    let html = `
-                        <div class="mb-6 last:mb-0">
-                            <div class="flex items-center gap-2 mb-3 pb-2 border-b border-slate-700">
-                                <i data-lucide="network" class="w-5 h-5 text-indigo-400"></i>
-                                <h3 class="text-lg font-bold text-white">${koepel}</h3>
-                            </div>
-                            <div class="space-y-3 pl-6 border-l border-slate-700 ml-2">
-                    `;
-                    gegroepeerd[koepel].forEach(s => {
-                        const dLijst = deelscholen.filter(d => d.school_id === s.school_id);
-                        const tags = dLijst.map(d => `<span class="bg-slate-800 border border-slate-600 text-xs px-2 py-1 rounded text-slate-300">${d.naam}</span>`).join(' ');
-                        
-                        html += `
-                            <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-800 flex justify-between items-center hover:border-slate-600 transition-colors">
-                                <div>
-                                    <h4 class="font-bold text-emerald-400 text-lg">${s.school_naam}</h4>
-                                    <div class="flex gap-4 mt-2 text-sm text-slate-400">
-                                        <span><i data-lucide="users" class="w-4 h-4 inline mr-1"></i> ${s.totaal_gebruikers} gebruikers</span>
-                                        <span title="Klassen"><i data-lucide="book-open" class="w-4 h-4 inline mr-1"></i> ${s.aantal_klassen} klassen</span>
-                                    </div>
-                                    ${tags ? `<div class="mt-3 flex flex-wrap gap-2 items-center"><i data-lucide="map-pin" class="w-4 h-4 text-slate-500"></i> ${tags}</div>` : '<div class="mt-3 text-xs text-slate-600 italic">Geen deelscholen</div>'}
+                    for(let koepel in gegroepeerd) {
+                        let html = `
+                            <div class="mb-6 last:mb-0">
+                                <div class="flex items-center gap-2 mb-3 pb-2 border-b border-slate-700">
+                                    <i data-lucide="network" class="w-5 h-5 text-indigo-400"></i>
+                                    <h3 class="text-lg font-bold text-white">${koepel}</h3>
                                 </div>
-                            </div>`;
-                    });
-                    html += `</div></div>`;
-                    container.innerHTML += html;
+                                <div class="space-y-3 pl-6 border-l border-slate-700 ml-2">
+                        `;
+                        gegroepeerd[koepel].forEach(s => {
+                            const dLijst = deelscholen.filter(d => d.school_id === s.school_id);
+                            const tags = dLijst.map(d => `<span class="bg-slate-800 border border-slate-600 text-xs px-2 py-1 rounded text-slate-300">${d.naam}</span>`).join(' ');
+                            
+                            html += `
+                                <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-800 flex justify-between items-center hover:border-slate-600 transition-colors">
+                                    <div>
+                                        <h4 class="font-bold text-emerald-400 text-lg">${s.school_naam}</h4>
+                                        <div class="flex gap-4 mt-2 text-sm text-slate-400">
+                                            <span><i data-lucide="users" class="w-4 h-4 inline mr-1"></i> ${s.totaal_gebruikers} gebruikers</span>
+                                            <span title="Klassen"><i data-lucide="book-open" class="w-4 h-4 inline mr-1"></i> ${s.aantal_klassen} klassen</span>
+                                        </div>
+                                        ${tags ? `<div class="mt-3 flex flex-wrap gap-2 items-center"><i data-lucide="map-pin" class="w-4 h-4 text-slate-500"></i> ${tags}</div>` : '<div class="mt-3 text-xs text-slate-600 italic">Geen deelscholen</div>'}
+                                    </div>
+                                </div>`;
+                        });
+                        html += `</div></div>`;
+                        container.innerHTML += html;
+                    }
                 }
 
                 // Render Samenwerkingen
                 const samContainer = document.getElementById('samenwerkingenLijst');
                 samContainer.innerHTML = '';
-                if(!samenwerkingen || samenwerkingen.length === 0) {
+                if(samenwerkingen.length === 0) {
                     samContainer.innerHTML = '<div class="glass-panel rounded-xl border border-slate-700 p-6 text-center text-slate-500">Geen samenwerkingen geladen.</div>';
                 } else {
                     samenwerkingen.forEach(s => {
+                        // Extra check voor als school1 of school2 ontbreekt in de view
+                        const naam1 = s.school1 ? s.school1.naam : 'Onbekende school';
+                        const naam2 = s.school2 ? s.school2.naam : 'Onbekende school';
+
                         samContainer.innerHTML += `
                             <div class="glass-panel rounded-xl border border-slate-700 p-6 flex items-center justify-between">
                                 <div class="flex items-center gap-4 text-slate-300">
-                                    <span class="bg-slate-800 px-3 py-1 rounded border border-slate-600">${s.school1.naam}</span>
+                                    <span class="bg-slate-800 px-3 py-1 rounded border border-slate-600">${naam1}</span>
                                     <i data-lucide="arrow-left-right" class="w-5 h-5 text-emerald-400"></i>
-                                    <span class="bg-slate-800 px-3 py-1 rounded border border-slate-600">${s.school2.naam}</span>
+                                    <span class="bg-slate-800 px-3 py-1 rounded border border-slate-600">${naam2}</span>
                                     ${s.beschrijving ? `<span class="text-sm text-slate-500 ml-4">(${s.beschrijving})</span>` : ''}
                                 </div>
                                 <button onclick="verwijderSamenwerking(${s.id})" class="text-red-400 hover:text-red-300"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
@@ -507,7 +526,10 @@
                     });
                 }
                 lucide.createIcons();
-            } catch(e) { console.error("Fout laden infrastructuur", e); }
+            } catch(e) { 
+                console.error("Fout laden infrastructuur", e); 
+                document.getElementById('scholenLijstContainer').innerHTML = `<div class="text-center text-red-500">Fout bij ophalen. Check of de SQL Views zijn aangemaakt! (${e.message})</div>`;
+            }
         }
 
         // 3. Gebruikers (Dropdown, view_school_stats & Leerkrachten tabel)
@@ -527,13 +549,15 @@
 
             try {
                 // Update stats
-                const { data: stats } = await supabase.from('view_school_stats').select('*').eq('school_id', schoolId).single();
+                const { data: stats, error: statsErr } = await supabase.from('view_school_stats').select('*').eq('school_id', schoolId).single();
                 if(stats) {
                     document.getElementById('statTotaal').textContent = stats.totaal_gebruikers;
                     document.getElementById('statLeerkrachten').textContent = stats.aantal_leerkrachten;
                     document.getElementById('statLeerlingen').textContent = stats.aantal_leerlingen;
                     document.getElementById('statKlassen').textContent = stats.aantal_klassen;
                     document.getElementById('titelLeerkrachtenLijst').textContent = `Lijst Leerkrachten (${stats.school_naam})`;
+                } else if(statsErr) {
+                    console.error("View Stats Fout:", statsErr);
                 }
 
                 // Update deelschool dropdown in formulier
@@ -620,8 +644,14 @@
                 const { data, error } = await supabase.from('systeem_log').select('*').order('created_at', {ascending: false}).limit(100);
                 if(error) throw error;
 
+                const logsData = data || [];
+
                 tbody.innerHTML = '';
-                data.forEach(log => {
+                if(logsData.length === 0) {
+                     tbody.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-slate-500">Nog geen logs aanwezig.</td></tr>';
+                }
+
+                logsData.forEach(log => {
                     let badgeKleur = 'bg-blue-500/20 text-blue-400';
                     if (log.type === 'ERROR') badgeKleur = 'bg-red-500/20 text-red-400';
                     if (log.type === 'WARNING') badgeKleur = 'bg-orange-500/20 text-orange-400';
